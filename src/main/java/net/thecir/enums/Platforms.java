@@ -30,7 +30,18 @@ import lombok.Getter;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public enum Platforms {
-    PS2("P2", "PS2");
+    PS2("P2", "PS2"),
+    PS3("P3", "PS3"),
+    PS4("P4", "PS4"),
+    XBOX360("XB3", "XBOX360"),
+    XBOXONE("XBO", "XBOXONE"),
+    WII("WII", "WII"),
+    PSP("PSP", "PSP"),
+    DS3("3D", "3DS"),
+    PSVITA("PSV", "PSVITA"),
+    PC("PC", "PC"),
+    NDS("DS", "NDS"),
+    Other("Other", "Other");
     @Getter
     private final String technopolisAbbreviation;
     @Getter
