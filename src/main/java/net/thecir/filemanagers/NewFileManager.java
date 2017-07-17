@@ -65,20 +65,21 @@ public class NewFileManager {
         NewFileFormatter formatter = new NewFileFormatter(wb);
         formatter.formatWorkbook();
         File file = fileCallback.getFile();
-        if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
-            if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
-                file = new File(file.toString() + ".xlsx");
-            } else {
-                file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
+        if (file != null) {
+            if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
+                if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
+                    file = new File(file.toString() + ".xlsx");
+                } else {
+                    file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
+                }
             }
-        }
-        try (FileOutputStream fileOut = new FileOutputStream(file)) {
-            wb.write(fileOut);
-            fileOut.close();
-        } catch (FileNotFoundException ex) {
-            log.log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            log.log(Level.SEVERE, null, ex);
+            try (FileOutputStream fileOut = new FileOutputStream(file)) {
+                wb.write(fileOut);
+            } catch (FileNotFoundException ex) {
+                log.log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                log.log(Level.SEVERE, null, ex);
+            }
         }
     }
 }
