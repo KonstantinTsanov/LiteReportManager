@@ -39,4 +39,25 @@ public class Constants {
     public static final String PLATFORMS_TABLE_TOTAL = "Total";
     public static final String TOTAL_PCS = "Total pcs";
     public static final String DAYS_IN_STOCK = "Days in stock";
+    public static final String SALES = "Sales";
+    public static final String STOCK = "Stock";
+    public static final String GAME = "Game";
+    public static final String SHOP = "Shop";
+    public static final String TOTAL = "Total";
+    public static final String PLATFORM = "Platform";
+    public static final String SHEET_2_LABEL = "Top 5 statistics";
+    public static final String TOP_LEFT_LABEL = "Top 5 shops by sales (Overall)";
+    public static final String TOP_RIGHT_LABEL = "Top 5 shops by sales (Latest week)";
+    public static final String BOTTOM_LEFT_LABEL = "Top 5 games by sales (Overall)";
+    public static final String BOTTOM_RIGHT_LABEL = "Top 5 games by sales (Latest week)";
+
+    public static final String SHEET_3_LABEL = "Overall sales by platform";
+    public static final String SHEET_4_LABEL = "Overall sales by game";
+
+    public static final String SHEET_2_NAME = "Top 5 statistics";
+    public static final String SHEET_3_NAME = "Overall sales by platform";
+    public static final String SHEET_4_NAME = "Overall sales by game";
+
+    public static final String NAMCO = "Namco";
+    public static final String SELL_OUT = "Sell out";
 }
