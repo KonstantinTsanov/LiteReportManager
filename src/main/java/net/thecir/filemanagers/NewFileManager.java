@@ -28,10 +28,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.extern.java.Log;
 import net.thecir.callbacks.FileCallback;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
@@ -61,25 +65,35 @@ public class NewFileManager {
     }
 
     public void createNewWorkbook() {
-        Workbook wb = new XSSFWorkbook();
-        NewFileFormatter formatter = new NewFileFormatter(wb);
-        formatter.formatWorkbook();
-        File file = fileCallback.getFile();
-        if (file != null) {
-            if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
-                if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
-                    file = new File(file.toString() + ".xlsx");
-                } else {
-                    file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
+        ClassLoader classLoader = getClass().getClassLoader();
+        File defaultXlsx = new File(classLoader.getResource("default.xlsx").getFile());
+        XSSFWorkbook wb;
+        try {
+            wb = new XSSFWorkbook(defaultXlsx);
+
+            NewFileFormatter formatter = new NewFileFormatter(wb);
+            formatter.formatWorkbook();
+            File file = fileCallback.getFile();
+            if (file != null) {
+                if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
+                    if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
+                        file = new File(file.toString() + ".xlsx");
+                    } else {
+                        file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
+                    }
+                }
+                try (FileOutputStream fileOut = new FileOutputStream(file)) {
+                    wb.write(fileOut);
+                } catch (FileNotFoundException ex) {
+                    log.log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    log.log(Level.SEVERE, null, ex);
                 }
             }
-            try (FileOutputStream fileOut = new FileOutputStream(file)) {
-                wb.write(fileOut);
-            } catch (FileNotFoundException ex) {
-                log.log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                log.log(Level.SEVERE, null, ex);
-            }
+        } catch (IOException ex) {
+            Logger.getLogger(NewFileManager.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InvalidFormatException ex) {
+            Logger.getLogger(NewFileManager.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
