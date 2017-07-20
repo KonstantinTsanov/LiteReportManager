@@ -23,19 +23,29 @@
  */
 package net.thecir.core;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import lombok.extern.java.Log;
+import net.thecir.exceptions.NewFileCreationException;
+import net.thecir.exceptions.OutputFileIOException;
 import net.thecir.filemanagers.NewFileManager;
 
 /**
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
+@Log
 public class LiteReportManager {
 
     private final ExecutorService newFileExec = Executors.newFixedThreadPool(1);
 
     private static LiteReportManager SINGLETON;
+
+    private JTextField outputField;
 
     public static LiteReportManager getInstance() {
         if (SINGLETON == null) {
@@ -44,11 +54,29 @@ public class LiteReportManager {
         return SINGLETON;
     }
 
+    public void setOutputArea(JTextField field) {
+        this.outputField = field;
+    }
+
     public void createNewFile() {
-        newFileExec.execute(new Runnable() {
-            @Override
-            public void run() {
-                NewFileManager.getInstance().createNewWorkbook();
+        newFileExec.execute(() -> {
+            try {
+                File newFile = NewFileManager.getInstance().createNewWorkbook();
+                if (newFile != null) {
+                    outputField.setText(newFile.getAbsolutePath());
+                }
+            } catch (OutputFileIOException ex) {
+                //TODO
+                log.log(Level.SEVERE, null, ex);
+                SwingUtilities.invokeLater(() -> {
+                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                });
+            } catch (NewFileCreationException ex) {
+                //TODO
+                log.log(Level.SEVERE, null, ex);
+                SwingUtilities.invokeLater(() -> {
+                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                });
             }
         });
     }
