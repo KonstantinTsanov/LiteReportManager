@@ -36,6 +36,8 @@ public class Constants {
     public static final int PLATFORMS_FIRSTROW = PLATFORMS_TABLE_FIRSTROW + 1;
     public static final int PLATFORMS_LASTROW = PLATFORMS_FIRSTROW - 1 + Platforms.values().length;
 
+    public static final int SELLOUTTABLEFIRSTCOLUMN = 3;
+    public static final int SELLOUTTABLELASTCOLUMN = 53;
     public static final String PLATFORMS_TABLE_TOTAL = "Total";
     public static final String TOTAL_PCS = "Total pcs";
     public static final String DAYS_IN_STOCK = "Days in stock";
