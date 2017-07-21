@@ -264,8 +264,8 @@ public class NewFileFormatter {
             Cell platformDaysInStockCell = sheet.getRow(platformDaysInStockCellRef.getRow()).getCell(platformDaysInStockCellRef.getCol());
             platformLabelCell.setCellValue(platform.toString());
             platformDaysInStockCell.setCellType(CellType.FORMULA);
-            platformDaysInStockCell.setCellFormula("IF(OR(BI" + rowIter + "=\"No data\",BI" + rowIter + "=\"\"),BI" + rowIter + "&\"\",IFERROR(BI" + rowIter + 
-                    "/BD" + rowIter + "*7*COUNT(C" + rowIter + ":BB" + rowIter + "),\"\"))");
+            platformDaysInStockCell.setCellFormula("IF(OR(BI" + rowIter + "=\"" + Constants.NO_DATA + "\",BI" + rowIter + "=\"\"),BI" + rowIter + "&\"\",IFERROR(BI" + rowIter
+                    + "/BD" + rowIter + "*7*COUNT(C" + rowIter + ":BB" + rowIter + "),\"\"))");
             rowIter++;
         }
         //Sets the Total label
