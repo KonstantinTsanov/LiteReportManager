@@ -31,13 +31,13 @@ import net.thecir.enums.Platforms;
  */
 public class Constants {
 
-    public static final int PLATFORMS_TABLE_FIRSTROW = 3;
+    public static final int PLATFORMS_TABLE_WEEK_ROW = 3;
     public static final int PLATFORMS_TABLE_LASTROW = Constants.PLATFORMS_FIRSTROW + Platforms.values().length;
-    public static final int PLATFORMS_FIRSTROW = PLATFORMS_TABLE_FIRSTROW + 1;
+    public static final int PLATFORMS_FIRSTROW = PLATFORMS_TABLE_WEEK_ROW + 1;
     public static final int PLATFORMS_LASTROW = PLATFORMS_FIRSTROW - 1 + Platforms.values().length;
 
-    public static final int SELLOUTTABLEFIRSTCOLUMN = 3;
-    public static final int SELLOUTTABLELASTCOLUMN = 53;
+    public static final int SELLOUT_TABLE_FIRST_COLUMN = 3;
+    public static final int SELLOUT_TABLE_LAST_COLUMN = 53;
     public static final String PLATFORMS_TABLE_TOTAL = "Total";
     public static final String TOTAL_PCS = "Total pcs";
     public static final String DAYS_IN_STOCK = "Days in stock";
@@ -62,4 +62,6 @@ public class Constants {
 
     public static final String NAMCO = "Namco";
     public static final String SELL_OUT = "Sell out";
+
+    public static String NO_DATA = "No data";
 }
