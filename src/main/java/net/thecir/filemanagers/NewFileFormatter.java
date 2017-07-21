@@ -47,7 +47,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public class NewFileFormatter {
-
+    
     private final XSSFWorkbook wb;
 
     /**
@@ -141,32 +141,32 @@ public class NewFileFormatter {
         String labelAddress = "A1:BE1";
         formatLabel(Constants.SELL_OUT, labelAddress, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void firstSheetStockLabel(XSSFSheet sheet) {
         String labelAddress = "BG1:BJ1";
         formatLabel(Constants.STOCK, labelAddress, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void firstSheetTotalLabel(XSSFSheet sheet) {
         String labelAddress = "BL1:BO1";
         formatLabel(Constants.TOTAL, labelAddress, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void firstSheetSelloutNamcoLabel(XSSFSheet sheet) {
         String labelAddress = "A" + Constants.PLATFORMS_FIRSTROW + ":A" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
-
+    
     private void firstSheetStockNamcoLabel(XSSFSheet sheet) {
         String labelAddress = "BG" + Constants.PLATFORMS_FIRSTROW + ":BG" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
-
+    
     private void firstSheetTotalNamcoLabel(XSSFSheet sheet) {
         String labelAddress = "BL" + Constants.PLATFORMS_FIRSTROW + ":BL" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
-
+    
     private void firstSheetTableSellout(XSSFSheet sheet) {
         CellRangeAddress tableAddress = CellRangeAddress.valueOf("B" + Constants.PLATFORMS_TABLE_WEEK_ROW + ":BE" + Constants.PLATFORMS_TABLE_LASTROW);
         createCells(tableAddress, sheet);
@@ -248,7 +248,7 @@ public class NewFileFormatter {
         totalPercentageCell.setCellType(CellType.FORMULA);
         totalPercentageCell.setCellFormula("SUM(BE" + Constants.PLATFORMS_FIRSTROW + ":BE" + Constants.PLATFORMS_LASTROW + ")");
     }
-
+    
     private void firstSheetTableStockFormat(XSSFSheet sheet) {
         CellRangeAddress tableAddress = CellRangeAddress.valueOf("BH" + Constants.PLATFORMS_FIRSTROW + ":" + "BJ" + Constants.PLATFORMS_TABLE_LASTROW);
         createCells(tableAddress, sheet);
@@ -259,8 +259,12 @@ public class NewFileFormatter {
         int rowIter = Constants.PLATFORMS_FIRSTROW;
         for (Platforms platform : Platforms.values()) {
             CellReference platformLabelCellRef = new CellReference("BH" + rowIter);
+            CellReference platformDaysInStockCellRef = new CellReference("BJ" + rowIter);
             Cell platformLabelCell = sheet.getRow(platformLabelCellRef.getRow()).getCell(platformLabelCellRef.getCol());
+            Cell platformDaysInStockCell = sheet.getRow(platformDaysInStockCellRef.getRow()).getCell(platformDaysInStockCellRef.getCol());
             platformLabelCell.setCellValue(platform.toString());
+            platformDaysInStockCell.setCellType(CellType.FORMULA);
+            platformDaysInStockCell.setCellFormula("BI" + rowIter + "/BD" + rowIter + "*7*COUNT(C" + rowIter + ":BB" + rowIter + ")");
             rowIter++;
         }
         //Sets the Total label
@@ -281,14 +285,14 @@ public class NewFileFormatter {
         daysInStockNumberFormat.cloneStyleFrom(tableCellStyle);
         daysInStockNumberFormat.setDataFormat(wb.createDataFormat().getFormat("0"));
         applyStyleToCells(CellRangeAddress.valueOf("BJ" + Constants.PLATFORMS_FIRSTROW + ":BJ" + Constants.PLATFORMS_TABLE_LASTROW), sheet, daysInStockNumberFormat);
-
+        
         CellReference totalDaysInStockRef = new CellReference("BJ" + Constants.PLATFORMS_TABLE_LASTROW);
         Cell totalDaysInStockCell = sheet.getRow(totalDaysInStockRef.getRow()).getCell(totalDaysInStockRef.getCol());
         totalDaysInStockCell.setCellType(CellType.FORMULA);
         totalDaysInStockCell.setCellFormula("BI" + Constants.PLATFORMS_TABLE_LASTROW + "/BD" + Constants.PLATFORMS_TABLE_LASTROW
                 + "*7*" + "COUNTIF(C" + Constants.PLATFORMS_TABLE_WEEK_ROW + ":BB" + Constants.PLATFORMS_TABLE_WEEK_ROW + ",\"<>\"&\"\")");
     }
-
+    
     private void firstSheetTableTotalFormat(XSSFSheet sheet) {
         CellRangeAddress tableAddress = CellRangeAddress.valueOf("BM" + Constants.PLATFORMS_FIRSTROW + ":" + "BO" + Constants.PLATFORMS_TABLE_LASTROW);
         createCells(tableAddress, sheet);
@@ -318,7 +322,7 @@ public class NewFileFormatter {
         percentageStyle.setDataFormat(wb.createDataFormat().getFormat("0.00%"));
         //Applies percentage style to the sales column
         applyStyleToCells(CellRangeAddress.valueOf("BN" + Constants.PLATFORMS_FIRSTROW + ":BN" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageStyle);
-
+        
         for (int i = Constants.PLATFORMS_FIRSTROW; i <= Constants.PLATFORMS_TABLE_LASTROW; i++) {
             CellReference salesCellRef = new CellReference("BN" + i);
             Cell salesCell = sheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
@@ -350,61 +354,61 @@ public class NewFileFormatter {
         String cellRange = "A1:R1";
         formatLabel(Constants.SHEET_2_LABEL, cellRange, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void secondSheetTopLeftTable(XSSFSheet sheet) {
         String labelAddress = "C5:H11";
         secondSheetFormatTable(Constants.TOP_LEFT_LABEL, Constants.SHOP, labelAddress, sheet);
     }
-
+    
     private void secondSheetTopRightTable(XSSFSheet sheet) {
         String labelAddress = "K5:P11";
         secondSheetFormatTable(Constants.TOP_RIGHT_LABEL, Constants.SHOP, labelAddress, sheet);
     }
-
+    
     private void secondSheetBottomLeftTable(XSSFSheet sheet) {
         String labelAddress = "C14:H20";
         secondSheetFormatTable(Constants.BOTTOM_LEFT_LABEL, Constants.GAME, labelAddress, sheet);
     }
-
+    
     private void secondSheetBottomRightTable(XSSFSheet sheet) {
         String labelAddress = "K14:P20";
         secondSheetFormatTable(Constants.BOTTOM_RIGHT_LABEL, Constants.GAME, labelAddress, sheet);
     }
-
+    
     private void secondSheetFormatTable(String tableLabel, String secondRowLabel, String cellRange, XSSFSheet sheet) {
         CellRangeAddress tableAddress = CellRangeAddress.valueOf(cellRange);
         createCells(tableAddress, sheet);
-
+        
         XSSFCellStyle tableStyle = (XSSFCellStyle) wb.createCellStyle();
         applyBorderStyle(tableStyle, BorderStyle.THIN);
         applyStyleToCells(tableAddress, sheet, tableStyle);
-
+        
         formatLabel(tableLabel, new CellRangeAddress(tableAddress.getFirstRow(), tableAddress.getFirstRow(), tableAddress.getFirstColumn(), tableAddress.getLastColumn())
                 .formatAsString(), sheet, 0xFFA500, (short) 0);
-
+        
         XSSFCellStyle firstRowLabelStyle = (XSSFCellStyle) wb.createCellStyle();
         firstRowLabelStyle.cloneStyleFrom(tableStyle);
-
+        
         Font labelFont = wb.createFont();
         labelFont.setBold(true);
         firstRowLabelStyle.setFont(labelFont);
-
+        
         for (int i = tableAddress.getFirstRow() + 1; i <= tableAddress.getLastRow(); i++) {
             CellRangeAddress secondRowLabelAddress = new CellRangeAddress(i, i, tableAddress.getFirstColumn(), tableAddress.getLastColumn() - 1);
             mergeCells(secondRowLabelAddress, sheet);
             applyStyleToCells(secondRowLabelAddress, sheet, tableStyle);
         }
-
+        
         XSSFCellStyle secondRowStyle = (XSSFCellStyle) wb.createCellStyle();
         secondRowStyle.cloneStyleFrom(tableStyle);
         secondRowStyle.setFont(labelFont);
         align(secondRowStyle, HorizontalAlignment.CENTER);
-
+        
         Row secondRow = sheet.getRow(tableAddress.getFirstRow() + 1);
         Cell secondRowLeftCell = secondRow.getCell(tableAddress.getFirstColumn());
         secondRowLeftCell.setCellValue(secondRowLabel);
         applyStyleToCells(new CellRangeAddress(tableAddress.getFirstRow() + 1, tableAddress.getFirstRow() + 1, tableAddress.getFirstColumn(), tableAddress.getLastColumn() - 1), sheet, secondRowStyle);
-
+        
         Cell secondRowRightCell = secondRow.getCell(tableAddress.getLastColumn());
         secondRowRightCell.setCellValue(Constants.SALES);
         applyStyleToCells(new CellRangeAddress(tableAddress.getFirstRow() + 1, tableAddress.getFirstRow() + 1, tableAddress.getLastColumn(), tableAddress.getLastColumn()), sheet, secondRowStyle);
@@ -416,7 +420,7 @@ public class NewFileFormatter {
         String labelAddress = "A1:R1";
         formatLabel(Constants.SHEET_3_LABEL, labelAddress, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void thirdSheetRowStatistics(XSSFSheet sheet) {
         final int row = 2; //0 based
         final int column = 3; //0 based
@@ -443,23 +447,23 @@ public class NewFileFormatter {
         String labelAddress = "A1:R1";
         formatLabel(Constants.SHEET_4_LABEL, labelAddress, sheet, 0xDAEEF3, (short) 0);
     }
-
+    
     private void fourthSheetRowStatistics(XSSFSheet sheet) {
         CellRangeAddress platformCellAddress = CellRangeAddress.valueOf("A3");
         CellUtil.getRow(platformCellAddress.getFirstRow(), sheet);
-
+        
         Cell platformCell = sheet.getRow(platformCellAddress.getFirstRow()).getCell(platformCellAddress.getFirstColumn(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
         platformCell.setCellValue(Constants.PLATFORM);
-
+        
         CellRangeAddress gameCellsAddress = CellRangeAddress.valueOf("B3:D3");
         createCells(gameCellsAddress, sheet);
         mergeCells(gameCellsAddress, sheet);
         setMergedCellsValue(gameCellsAddress, sheet, Constants.GAME);
-
+        
         CellRangeAddress salesCellAddress = CellRangeAddress.valueOf("E3");
         Cell salesCell = sheet.getRow(salesCellAddress.getFirstRow()).getCell(salesCellAddress.getFirstColumn(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
         salesCell.setCellValue(Constants.SALES);
-
+        
     }
 
     //--------------END OF FOURTH SHEET FORMATTERS-------------//
@@ -501,7 +505,7 @@ public class NewFileFormatter {
     private void align(XSSFCellStyle style, HorizontalAlignment alignment) {
         style.setAlignment(alignment);
     }
-
+    
     private void setRotation(XSSFCellStyle style, short degrees) {
         style.setRotation(degrees);
     }
@@ -557,7 +561,7 @@ public class NewFileFormatter {
             }
         }
     }
-
+    
     private void createCells(CellRangeAddress region, Sheet sheet) {
         for (int i = region.getFirstRow(); i <= region.getLastRow(); i++) {
             Row row = CellUtil.getRow(i, sheet);
