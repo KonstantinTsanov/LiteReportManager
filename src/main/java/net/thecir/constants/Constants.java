@@ -38,6 +38,13 @@ public class Constants {
 
     public static final int SELLOUT_TABLE_FIRST_COLUMN = 3;
     public static final int SELLOUT_TABLE_LAST_COLUMN = 53;
+
+    public static final int TOP_FIVE_TOP_FIRST_ROW = 7;
+    public static final int TOP_FIVE_TOP_LAST_ROW = 11;
+    public static final int TOP_FIVE_BOTTOM_FIRST_ROW = 16;
+    public static final int TOP_FIVE_BOTTOM_LAST_ROW = 20;
+
+    public static final int OVERALL_SALES_BY_PLATFORM_FIRST_ROW = 4;
     public static final String PLATFORMS_TABLE_TOTAL = "Total";
     public static final String TOTAL_PCS = "Total pcs";
     public static final String DAYS_IN_STOCK = "Days in stock";
@@ -64,4 +71,5 @@ public class Constants {
     public static final String SELL_OUT = "Sell out";
 
     public static String NO_DATA = "No data";
+
 }
