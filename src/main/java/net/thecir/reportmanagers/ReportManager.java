@@ -50,9 +50,12 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.ss.util.CellUtil;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -368,9 +371,7 @@ public abstract class ReportManager {
             if (platformsGamesAndSales.containsKey(platformCell.getStringCellValue())) {
                 if (!platformsGamesAndSales.get(platformCell.getStringCellValue()).containsKey(gameCell.getStringCellValue())) {
                     int sales;
-                    if (!NumberUtils.isParsable(salesCell.getStringCellValue())) {
-                        continue;
-                    } else {
+                    if (NumberUtils.isParsable(salesCell.getStringCellValue())) {
                         sales = Integer.parseInt(salesCell.getStringCellValue());
                         platformsGamesAndSales.get(platformCell.getStringCellValue()).put(gameCell.getStringCellValue(), sales);
                     }
@@ -400,23 +401,132 @@ public abstract class ReportManager {
     }
 
     private void topFiveShopsBySalesLatestWeek() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        HashMap<String, Integer> shopsAndSales = new HashMap<>();
+        for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
+            if (!shopsAndSales.containsKey(shop.getKey())) {
+                shopsAndSales.put(shop.getKey(), 0);
+            }
+            for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    shopsAndSales.put(shop.getKey(), shopsAndSales.get(shop.getKey()) + newData.get(shop.getKey()).get(platform.getKey()).get(game.getKey()).Sales);
+                }
+            }
+        }
+        List<Entry<String, Integer>> sortedShopsAndSalesList = shopsAndSales.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        for (int row = Constants.TOP_FIVE_TOP_FIRST_ROW; row <= Constants.TOP_FIVE_TOP_LAST_ROW; row++) {
+            if (sortedShopsAndSalesList.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
+                CellReference shopCellRef = new CellReference("K" + row);
+                CellReference stockCellRef = new CellReference("P" + row);
+                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
+                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
+            }
+        }
     }
 
     private void topFiveGamesBySalesLatestWeek() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        HashMap<String, Integer> platformsGamesAndSales = new HashMap<>();
+        for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
+            for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    if (platformsGamesAndSales.containsKey(platform.getKey() + " " + game.getKey())) {
+                        platformsGamesAndSales.put(platform.getKey() + " " + game.getKey(), platformsGamesAndSales.get(platform.getKey() + " " + game.getKey()) + game.getValue().Sales);
+                    } else {
+                        platformsGamesAndSales.put(platform.getKey() + " " + game.getKey(), game.getValue().Sales);
+                    }
+                }
+            }
+        }
+        List<Entry<String, Integer>> sortedPlatformsGamesAndSales = platformsGamesAndSales.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        for (int row = Constants.TOP_FIVE_BOTTOM_FIRST_ROW; row <= Constants.TOP_FIVE_BOTTOM_LAST_ROW; row++) {
+            if (sortedPlatformsGamesAndSales.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
+                CellReference shopCellRef = new CellReference("K" + row);
+                CellReference stockCellRef = new CellReference("P" + row);
+                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
+                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
+            }
+        }
     }
 
     private void writeOverallSalesByPlatform() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if (salesByPlatformSheet.getLastRowNum() > 2) {
+            overallSalesByPlatformExistingRecords();
+        } else {
+            overallSalesByPlatformFreshRecords();
+        }
     }
 
     private void overallSalesByPlatformExistingRecords() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        HashMap<String, HashMap<String, Integer>> currentStatistics = getCurrentOverallSalesByPlatform();
+        for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
+            if (!currentStatistics.containsKey(shop.getKey())) {
+                currentStatistics.put(shop.getKey(), new HashMap<>());
+                for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                    if (!currentStatistics.get(shop.getKey()).containsKey(platform.getKey())) {
+                        currentStatistics.get(shop.getKey()).put(platform.getKey(), 0);
+                    }
+                    for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                        if (!undo) {
+                            currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) + game.getValue().Sales);
+                        } else {
+                            currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) - game.getValue().Sales);
+                        }
+                    }
+                }
+            }
+        }
+        List<Entry<String, HashMap<String, Integer>>> newStatistics = currentStatistics.entrySet().stream().collect(Collectors.toList());
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row < newStatistics.size() + Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row++) {
+            CellRangeAddress shopNameCellAddress = CellRangeAddress.valueOf("A" + row + ":C" + row);
+            salesByPlatformSheet.addMergedRegion(shopNameCellAddress);
+            CellReference shopCellRef = new CellReference(row - 1, 0);
+            Row shopRow = CellUtil.getRow(shopCellRef.getRow(), salesByPlatformSheet);
+            Cell shopCell = salesByPlatformSheet.getRow(shopRow.getRowNum()).getCell(shopCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            shopCell.setCellValue(newStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getKey());
+            CellReference totalCellRef = new CellReference(row - 1, Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL - 1);
+            Row totalRow = CellUtil.getRow(totalCellRef.getRow(), salesByPlatformSheet);
+            Cell totalCell = salesByPlatformSheet.getRow(totalRow.getRowNum()).getCell(totalCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            totalCell.setCellType(CellType.FORMULA);
+            totalCell.setCellFormula("SUM(D" + row + ":O" + row + ")");
+            for (Entry<String, Integer> platform : newStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().entrySet()) {
+                for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column < Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; row++) {
+                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL - 1, column - 1);
+                    if (salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue().equals(platform.getKey())) {
+                        CellReference platformSalesCellRef = new CellReference(row - 1, column - 1);
+                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow()).getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(platform.getValue());
+                    }
+                }
+            }
+        }
     }
 
     private void overallSalesByPlatformFreshRecords() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        List<Entry<String, HashMap<String, HashMap<String, StockSales>>>> currentStatistics = newData.entrySet().stream().collect(Collectors.toList());
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row < currentStatistics.size() + Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row++) {
+            CellRangeAddress shopNameCellAddress = CellRangeAddress.valueOf("A" + row + ":C" + row);
+            salesByPlatformSheet.addMergedRegion(shopNameCellAddress);
+            CellReference shopCellRef = new CellReference(row - 1, 0);
+            Row shopRow = CellUtil.getRow(shopCellRef.getRow(), salesByPlatformSheet);
+            Cell shopCell = salesByPlatformSheet.getRow(shopRow.getRowNum()).getCell(shopCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            shopCell.setCellValue(currentStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getKey());
+            CellReference totalCellRef = new CellReference(row - 1, Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL - 1);
+            Row totalRow = CellUtil.getRow(totalCellRef.getRow(), salesByPlatformSheet);
+            Cell totalCell = salesByPlatformSheet.getRow(totalRow.getRowNum()).getCell(totalCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            totalCell.setCellType(CellType.FORMULA);
+            totalCell.setCellFormula("SUM(D" + row + ":O" + row + ")");
+            for (Entry<String, HashMap<String, StockSales>> platform : currentStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().entrySet()) {
+                int sumSales = 0;
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    sumSales += currentStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().get(platform.getKey()).get(game.getKey()).Sales;
+                }
+                for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column < Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; column++) {
+                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL - 1, column - 1);
+                    if (salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue().equals(platform.getKey())) {
+                        CellReference platformSalesCellRef = new CellReference(row - 1, column - 1);
+                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow()).getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(sumSales);
+                    }
+                }
+            }
+        }
     }
 
     private HashMap<String, HashMap<String, Integer>> getCurrentOverallSalesByPlatform() {
