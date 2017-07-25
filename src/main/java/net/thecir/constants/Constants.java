@@ -32,9 +32,9 @@ import net.thecir.enums.Platforms;
 public class Constants {
 
     public static final int PLATFORMS_TABLE_WEEK_ROW = 3;
-    public static final int PLATFORMS_TABLE_LASTROW = Constants.PLATFORMS_FIRSTROW + Platforms.values().length;
-    public static final int PLATFORMS_FIRSTROW = PLATFORMS_TABLE_WEEK_ROW + 1;
-    public static final int PLATFORMS_LASTROW = PLATFORMS_FIRSTROW - 1 + Platforms.values().length;
+    public static final int PLATFORMS_TABLE_LASTROW = Constants.PLATFORM_HEADER_FIRST_ROW + Platforms.values().length;
+    public static final int PLATFORM_HEADER_FIRST_ROW = PLATFORMS_TABLE_WEEK_ROW + 1;
+    public static final int PLATFORM_HEADER_LAST_ROW = PLATFORM_HEADER_FIRST_ROW - 1 + Platforms.values().length;
 
     public static final int SELLOUT_TABLE_FIRST_COLUMN = 3;
     public static final int SELLOUT_TABLE_LAST_COLUMN = 53;
@@ -44,7 +44,14 @@ public class Constants {
     public static final int TOP_FIVE_BOTTOM_FIRST_ROW = 16;
     public static final int TOP_FIVE_BOTTOM_LAST_ROW = 20;
 
+    public static final int OVERALL_SALES_BY_PLATFORM_HEADER_ROW = 3;
     public static final int OVERALL_SALES_BY_PLATFORM_FIRST_ROW = 4;
+    public static final int OVERALL_SALES_BY_PLATFORM_FIRST_COL = 4;
+    //+1 for the total column, non 0-based
+    public static final int OVERALL_SALES_BY_PLATFORM_LAST_COL = Platforms.values().length + OVERALL_SALES_BY_PLATFORM_FIRST_COL;
+
+    public static final int OVERALL_SALES_BY_GAME_FIRST_ROW = 4;
+
     public static final String PLATFORMS_TABLE_TOTAL = "Total";
     public static final String TOTAL_PCS = "Total pcs";
     public static final String DAYS_IN_STOCK = "Days in stock";
