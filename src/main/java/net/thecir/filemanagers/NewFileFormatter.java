@@ -153,17 +153,17 @@ public class NewFileFormatter {
     }
 
     private void firstSheetSelloutNamcoLabel(XSSFSheet sheet) {
-        String labelAddress = "A" + Constants.PLATFORMS_FIRSTROW + ":A" + Constants.PLATFORMS_TABLE_LASTROW;
+        String labelAddress = "A" + Constants.PLATFORM_HEADER_FIRST_ROW + ":A" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
 
     private void firstSheetStockNamcoLabel(XSSFSheet sheet) {
-        String labelAddress = "BG" + Constants.PLATFORMS_FIRSTROW + ":BG" + Constants.PLATFORMS_TABLE_LASTROW;
+        String labelAddress = "BG" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BG" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
 
     private void firstSheetTotalNamcoLabel(XSSFSheet sheet) {
-        String labelAddress = "BL" + Constants.PLATFORMS_FIRSTROW + ":BL" + Constants.PLATFORMS_TABLE_LASTROW;
+        String labelAddress = "BL" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BL" + Constants.PLATFORMS_TABLE_LASTROW;
         formatLabel(Constants.NAMCO, labelAddress, sheet, 0xDA9694, (short) 90);
     }
 
@@ -185,7 +185,7 @@ public class NewFileFormatter {
         align(weekBarStyle, HorizontalAlignment.RIGHT);
         applyStyleToCells(CellRangeAddress.valueOf("C" + Constants.PLATFORMS_TABLE_WEEK_ROW + ":BB" + Constants.PLATFORMS_TABLE_WEEK_ROW), sheet, weekBarStyle);
         //Sets the platforms labels to the left and right
-        int rowIter = Constants.PLATFORMS_FIRSTROW;
+        int rowIter = Constants.PLATFORM_HEADER_FIRST_ROW;
         for (Platforms platform : Platforms.values()) {
             CellReference leftCellRef = new CellReference("B" + rowIter);
             CellReference rightCellRef = new CellReference("BC" + rowIter);
@@ -208,7 +208,7 @@ public class NewFileFormatter {
             CellReference totalCellRef = new CellReference(letter + Constants.PLATFORMS_TABLE_LASTROW);
             Cell totalCell = sheet.getRow(totalCellRef.getRow()).getCell(totalCellRef.getCol());
             totalCell.setCellType(CellType.FORMULA);
-            totalCell.setCellFormula("SUM(" + letter + Constants.PLATFORMS_FIRSTROW + ":" + letter + Constants.PLATFORMS_LASTROW + ")");
+            totalCell.setCellFormula("SUM(" + letter + Constants.PLATFORM_HEADER_FIRST_ROW + ":" + letter + Constants.PLATFORM_HEADER_LAST_ROW + ")");
         }
         XSSFCellStyle totalPcsStyle = (XSSFCellStyle) wb.createCellStyle();
         totalPcsStyle.cloneStyleFrom(tableCellStyle);
@@ -222,9 +222,9 @@ public class NewFileFormatter {
         XSSFCellStyle totalPcsColumnStyle = (XSSFCellStyle) wb.createCellStyle();
         totalPcsColumnStyle.cloneStyleFrom(tableCellStyle);
         setBackgroundColor(totalPcsColumnStyle, 0x92D050);
-        applyStyleToCells(CellRangeAddress.valueOf("BD" + Constants.PLATFORMS_FIRSTROW + ":BD" + Constants.PLATFORMS_TABLE_LASTROW), sheet, totalPcsColumnStyle);
+        applyStyleToCells(CellRangeAddress.valueOf("BD" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BD" + Constants.PLATFORMS_TABLE_LASTROW), sheet, totalPcsColumnStyle);
         //From platforms firstrow to the last row of the table, so i can sum all weeks
-        for (int i = Constants.PLATFORMS_FIRSTROW; i <= Constants.PLATFORMS_TABLE_LASTROW; i++) {
+        for (int i = Constants.PLATFORM_HEADER_FIRST_ROW; i <= Constants.PLATFORMS_TABLE_LASTROW; i++) {
             CellReference totalPcsCellRef = new CellReference("BD" + i);
             Cell totalPcsCell = sheet.getRow(totalPcsCellRef.getRow()).getCell(totalPcsCellRef.getCol());
             totalPcsCell.setCellType(CellType.FORMULA);
@@ -234,9 +234,9 @@ public class NewFileFormatter {
         XSSFCellStyle percentageColumnStyle = (XSSFCellStyle) wb.createCellStyle();
         percentageColumnStyle.cloneStyleFrom(tableCellStyle);
         percentageColumnStyle.setDataFormat(wb.createDataFormat().getFormat("0.00%"));
-        applyStyleToCells(CellRangeAddress.valueOf("BE" + Constants.PLATFORMS_FIRSTROW + ":BE" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageColumnStyle);
+        applyStyleToCells(CellRangeAddress.valueOf("BE" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BE" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageColumnStyle);
         //Percentage column formulas
-        for (int i = Constants.PLATFORMS_FIRSTROW; i <= Constants.PLATFORMS_LASTROW; i++) {
+        for (int i = Constants.PLATFORM_HEADER_FIRST_ROW; i <= Constants.PLATFORM_HEADER_LAST_ROW; i++) {
             CellReference percentageCellsRef = new CellReference("BE" + i);
             Cell percentageCell = sheet.getRow(percentageCellsRef.getRow()).getCell(percentageCellsRef.getCol());
             percentageCell.setCellType(CellType.FORMULA);
@@ -246,17 +246,17 @@ public class NewFileFormatter {
         CellReference totalPercentageCellRef = new CellReference("BE" + Constants.PLATFORMS_TABLE_LASTROW);
         Cell totalPercentageCell = sheet.getRow(totalPercentageCellRef.getRow()).getCell(totalPercentageCellRef.getCol());
         totalPercentageCell.setCellType(CellType.FORMULA);
-        totalPercentageCell.setCellFormula("SUM(BE" + Constants.PLATFORMS_FIRSTROW + ":BE" + Constants.PLATFORMS_LASTROW + ")");
+        totalPercentageCell.setCellFormula("SUM(BE" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BE" + Constants.PLATFORM_HEADER_LAST_ROW + ")");
     }
 
     private void firstSheetTableStockFormat(XSSFSheet sheet) {
-        CellRangeAddress tableAddress = CellRangeAddress.valueOf("BH" + Constants.PLATFORMS_FIRSTROW + ":" + "BJ" + Constants.PLATFORMS_TABLE_LASTROW);
+        CellRangeAddress tableAddress = CellRangeAddress.valueOf("BH" + Constants.PLATFORM_HEADER_FIRST_ROW + ":" + "BJ" + Constants.PLATFORMS_TABLE_LASTROW);
         createCells(tableAddress, sheet);
         XSSFCellStyle tableCellStyle = (XSSFCellStyle) wb.createCellStyle();
         applyBorderStyle(tableCellStyle, BorderStyle.THIN);
         applyStyleToCells(tableAddress, sheet, tableCellStyle);
         //Adds platform labels to table stock
-        int rowIter = Constants.PLATFORMS_FIRSTROW;
+        int rowIter = Constants.PLATFORM_HEADER_FIRST_ROW;
         for (Platforms platform : Platforms.values()) {
             CellReference platformLabelCellRef = new CellReference("BH" + rowIter);
             CellReference platformDaysInStockCellRef = new CellReference("BJ" + rowIter);
@@ -276,7 +276,7 @@ public class NewFileFormatter {
         CellReference totalFormulaCellRef = new CellReference("BI" + Constants.PLATFORMS_TABLE_LASTROW);
         Cell totalFormulaCell = sheet.getRow(totalFormulaCellRef.getRow()).getCell(totalFormulaCellRef.getCol());
         totalFormulaCell.setCellType(CellType.FORMULA);
-        totalFormulaCell.setCellFormula("SUM(BI" + Constants.PLATFORMS_FIRSTROW + ":BI" + Constants.PLATFORMS_LASTROW + ")");
+        totalFormulaCell.setCellFormula("SUM(BI" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BI" + Constants.PLATFORM_HEADER_LAST_ROW + ")");
         //Sets the days in stock label
         CellReference daysInStockLabelCellRef = new CellReference("BJ" + Constants.PLATFORMS_TABLE_WEEK_ROW);
         Cell daysInStockLabelCell = sheet.getRow(daysInStockLabelCellRef.getRow()).getCell(daysInStockLabelCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
@@ -285,7 +285,7 @@ public class NewFileFormatter {
         XSSFCellStyle daysInStockNumberFormat = (XSSFCellStyle) wb.createCellStyle();
         daysInStockNumberFormat.cloneStyleFrom(tableCellStyle);
         daysInStockNumberFormat.setDataFormat(wb.createDataFormat().getFormat("0"));
-        applyStyleToCells(CellRangeAddress.valueOf("BJ" + Constants.PLATFORMS_FIRSTROW + ":BJ" + Constants.PLATFORMS_TABLE_LASTROW), sheet, daysInStockNumberFormat);
+        applyStyleToCells(CellRangeAddress.valueOf("BJ" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BJ" + Constants.PLATFORMS_TABLE_LASTROW), sheet, daysInStockNumberFormat);
 
         CellReference totalDaysInStockRef = new CellReference("BJ" + Constants.PLATFORMS_TABLE_LASTROW);
         Cell totalDaysInStockCell = sheet.getRow(totalDaysInStockRef.getRow()).getCell(totalDaysInStockRef.getCol());
@@ -295,14 +295,14 @@ public class NewFileFormatter {
     }
 
     private void firstSheetTableTotalFormat(XSSFSheet sheet) {
-        CellRangeAddress tableAddress = CellRangeAddress.valueOf("BM" + Constants.PLATFORMS_FIRSTROW + ":" + "BO" + Constants.PLATFORMS_TABLE_LASTROW);
+        CellRangeAddress tableAddress = CellRangeAddress.valueOf("BM" + Constants.PLATFORM_HEADER_FIRST_ROW + ":" + "BO" + Constants.PLATFORMS_TABLE_LASTROW);
         createCells(tableAddress, sheet);
         XSSFCellStyle tableCellStyle = (XSSFCellStyle) wb.createCellStyle();
         applyBorderStyle(tableCellStyle, BorderStyle.THIN);
         applyStyleToCells(tableAddress, sheet, tableCellStyle);
 
         //Sets the platform labels to the table
-        int rowIter = Constants.PLATFORMS_FIRSTROW;
+        int rowIter = Constants.PLATFORM_HEADER_FIRST_ROW;
         for (Platforms platform : Platforms.values()) {
             CellReference platformCellRef = new CellReference("BM" + rowIter);
             Cell platformCell = sheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol());
@@ -322,9 +322,9 @@ public class NewFileFormatter {
         percentageStyle.cloneStyleFrom(tableCellStyle);
         percentageStyle.setDataFormat(wb.createDataFormat().getFormat("0.00%"));
         //Applies percentage style to the sales column
-        applyStyleToCells(CellRangeAddress.valueOf("BN" + Constants.PLATFORMS_FIRSTROW + ":BN" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageStyle);
+        applyStyleToCells(CellRangeAddress.valueOf("BN" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BN" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageStyle);
 
-        for (int i = Constants.PLATFORMS_FIRSTROW; i <= Constants.PLATFORMS_TABLE_LASTROW; i++) {
+        for (int i = Constants.PLATFORM_HEADER_FIRST_ROW; i <= Constants.PLATFORMS_TABLE_LASTROW; i++) {
             CellReference salesCellRef = new CellReference("BN" + i);
             Cell salesCell = sheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
             salesCell.setCellType(CellType.FORMULA);
@@ -335,8 +335,8 @@ public class NewFileFormatter {
         Cell stockLabel = sheet.getRow(stockLabelRef.getRow()).getCell(stockLabelRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
         stockLabel.setCellValue(Constants.STOCK);
         //Applies percentage style to the stock column
-        applyStyleToCells(CellRangeAddress.valueOf("BO" + Constants.PLATFORMS_FIRSTROW + ":BO" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageStyle);
-        for (int i = Constants.PLATFORMS_FIRSTROW; i <= Constants.PLATFORMS_LASTROW; i++) {
+        applyStyleToCells(CellRangeAddress.valueOf("BO" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BO" + Constants.PLATFORMS_TABLE_LASTROW), sheet, percentageStyle);
+        for (int i = Constants.PLATFORM_HEADER_FIRST_ROW; i <= Constants.PLATFORM_HEADER_LAST_ROW; i++) {
             CellReference stockCellRef = new CellReference("BO" + i);
             Cell stockCell = sheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol());
             stockCell.setCellType(CellType.FORMULA);
@@ -346,7 +346,7 @@ public class NewFileFormatter {
         CellReference totalStockCellRef = new CellReference("BO" + Constants.PLATFORMS_TABLE_LASTROW);
         Cell totalStockCell = sheet.getRow(totalStockCellRef.getRow()).getCell(totalStockCellRef.getCol());
         totalStockCell.setCellType(CellType.FORMULA);
-        totalStockCell.setCellFormula("SUM(BO" + Constants.PLATFORMS_FIRSTROW + ":BO" + Constants.PLATFORMS_LASTROW + ")");
+        totalStockCell.setCellFormula("SUM(BO" + Constants.PLATFORM_HEADER_FIRST_ROW + ":BO" + Constants.PLATFORM_HEADER_LAST_ROW + ")");
     }
 
     //--------------END OF FIRST SHEET FORMATTERS-----------------//
