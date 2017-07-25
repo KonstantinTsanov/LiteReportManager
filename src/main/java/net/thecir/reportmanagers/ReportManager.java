@@ -164,7 +164,7 @@ public abstract class ReportManager {
             //Set the current report's week
             weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()).setCellValue("Stock w" + weekNo);
             weeklyReportSheet.getRow(weekCellRef.getRow()).getCell(weekCellRef.getCol()).setCellValue("w" + weekNo);
-            for (int row = Constants.PLATFORMS_LASTROW; row < Platforms.values().length; row++) {
+            for (int row = Constants.PLATFORM_HEADER_LAST_ROW; row < Platforms.values().length; row++) {
                 CellReference currentOutputAbbreviationRef = new CellReference("B" + row);
                 String currentOutputAbbreviation = weeklyReportSheet.getRow(currentOutputAbbreviationRef.getRow())
                         .getCell(currentOutputAbbreviationRef.getCol()).getStringCellValue();
@@ -191,7 +191,7 @@ public abstract class ReportManager {
         int columnToRemove = findWeekToUndo(stockAndSalesByPlatform, weekNo);
         CellReference cellOfWeekToRemoveRef = new CellReference(Constants.PLATFORMS_TABLE_WEEK_ROW - 1, columnToRemove - 1);
         weeklyReportSheet.getRow(cellOfWeekToRemoveRef.getRow()).getCell(cellOfWeekToRemoveRef.getCol()).setCellType(CellType.BLANK);
-        for (int row = Constants.PLATFORMS_FIRSTROW; row < Platforms.values().length + Constants.PLATFORMS_FIRSTROW; row++) {
+        for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; row++) {
             CellReference cellToRemoveRef = new CellReference(row - 1, columnToRemove - 1);
             weeklyReportSheet.getRow(cellToRemoveRef.getRow()).getCell(cellToRemoveRef.getCol()).setCellType(CellType.BLANK);
         }
@@ -200,7 +200,7 @@ public abstract class ReportManager {
         Pattern pattern = Pattern.compile("w" + weekNo);
         Matcher m = pattern.matcher(weeklyReportSheet.getRow(stockWeekNumberCellRef.getRow()).getCell(stockWeekNumberCellRef.getCol()).getStringCellValue());
         if (m.matches()) {
-            for (int row = Constants.PLATFORMS_FIRSTROW; row < Platforms.values().length + Constants.PLATFORMS_FIRSTROW; row++) {
+            for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; row++) {
                 CellReference latestWeekStockCellRef = new CellReference("BI" + row);
                 CellReference currentRowPlatformCellRef = new CellReference("B" + row);
                 if (weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()).getCellTypeEnum() == CellType.BLANK) {
@@ -222,7 +222,7 @@ public abstract class ReportManager {
                     }
                     break;
                 }
-                for (int rowToDeleteOn = Constants.PLATFORMS_FIRSTROW; rowToDeleteOn < Platforms.values().length + Constants.PLATFORMS_FIRSTROW; rowToDeleteOn++) {
+                for (int rowToDeleteOn = Constants.PLATFORM_HEADER_FIRST_ROW; rowToDeleteOn < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; rowToDeleteOn++) {
                     CellReference stockCellToBeRemoved = new CellReference("BI" + rowToDeleteOn);
                     weeklyReportSheet.getRow(stockCellToBeRemoved.getRow()).getCell(stockCellToBeRemoved.getCol()).setCellValue(Constants.NO_DATA);
                 }
@@ -270,7 +270,7 @@ public abstract class ReportManager {
         }
         for (int column = columnsMatchingWeeklyHeader.size() - 1; column >= 0; column--) {
             boolean continueSearching = false;
-            for (int row = Constants.PLATFORMS_FIRSTROW; row < Platforms.values().length + Constants.PLATFORMS_FIRSTROW; row++) {
+            for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; row++) {
                 CellReference currentPlatformCellRef = new CellReference("B" + row);
                 CellReference currentValueCellRef = new CellReference(row - 1, columnsMatchingWeeklyHeader.get(column) - 1);
                 String currentRowPlatform = weeklyReportSheet.getRow(currentPlatformCellRef.getRow()).getCell(currentPlatformCellRef.getCol()).getStringCellValue();
@@ -456,7 +456,7 @@ public abstract class ReportManager {
     }
 
     private void overallSalesByPlatformExistingRecords() {
-        HashMap<String, HashMap<String, Integer>> currentStatistics = getCurrentOverallSalesByPlatform();
+        HashMap<String, HashMap<String, Integer>> currentStatistics = getCurrentOverallSalesPerPlatform();
         for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
             if (!currentStatistics.containsKey(shop.getKey())) {
                 currentStatistics.put(shop.getKey(), new HashMap<>());
@@ -529,24 +529,141 @@ public abstract class ReportManager {
         }
     }
 
-    private HashMap<String, HashMap<String, Integer>> getCurrentOverallSalesByPlatform() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    private HashMap<String, HashMap<String, Integer>> getCurrentOverallSalesPerPlatform() {
+        HashMap<String, HashMap<String, Integer>> shopPlatformSales = new HashMap<>();
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= salesByPlatformSheet.getLastRowNum(); row++) {
+            CellReference shopCellRef = new CellReference(row - 1, 0);
+            Cell shopCell = salesByPlatformSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol());
+            if (shopCell.getCellTypeEnum() == CellType.BLANK) {
+                continue;
+            }
+            if (!shopPlatformSales.containsKey(shopCell.getStringCellValue())) {
+                shopPlatformSales.put(shopCell.getStringCellValue(), new HashMap<>());
+                for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column <= Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; column++) {
+                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_HEADER_ROW - 1, column - 1);
+                    Cell platformCell = salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol());
+                    if (platformCell.getStringCellValue().equals(Constants.TOTAL)) {
+                        break;
+                    }
+                    if (!shopPlatformSales.get(shopCell.getStringCellValue()).containsKey(platformCell.getStringCellValue())) {
+                        CellReference platformSalesValueCellRef = new CellReference(row - 1, column - 1);
+                        Cell platformSalesValueCell = salesByPlatformSheet.getRow(platformSalesValueCellRef.getRow()).getCell(platformSalesValueCellRef.getCol());
+                        if (platformSalesValueCell.getCellTypeEnum() != CellType.BLANK && NumberUtils.isParsable(platformSalesValueCell.getStringCellValue())) {
+                            int platformSalesParsed = Integer.parseInt(platformSalesValueCell.getStringCellValue());
+                            shopPlatformSales.get(shopCell.getStringCellValue()).put(platformCell.getStringCellValue(), 0);
+                            shopPlatformSales.get(shopCell.getStringCellValue())
+                                    .put(platformCell.getStringCellValue(), shopPlatformSales.get(shopCell.getStringCellValue())
+                                            .get(platformCell.getStringCellValue()) + platformSalesParsed);
+                        }
+                    }
+                }
+            }
+        }
+        return shopPlatformSales;
     }
 
     private void writeOverallSalesByGame() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if (salesByGameSheet.getLastRowNum() > 2) {
+            salesByGameExistingRecords();
+        } else {
+            salesByGameFreshRecords();
+        }
     }
 
     private void salesByGameExistingRecords() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        int currentLastRow;
+        for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
+            for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    //0 based + 1 to make it 1-based;
+                    currentLastRow = salesByGameSheet.getLastRowNum() + 1;
+
+                    for (int row = Constants.OVERALL_SALES_BY_GAME_FIRST_ROW; row <= currentLastRow; row++) {
+                        CellReference platformCellRef = new CellReference("A" + row);
+                        Cell platformCell = salesByGameSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol());
+                        CellReference gameCellRef = new CellReference("B" + row);
+                        Cell gameCell = salesByGameSheet.getRow(gameCellRef.getRow()).getCell(gameCellRef.getCol());
+                        CellReference salesCellRef = new CellReference("E" + row);
+                        Cell salesCell = salesByGameSheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
+                        if (platformCell.getStringCellValue().equals(platform.getKey())) {
+                            if (salesCell.getStringCellValue().equals(game.getKey())) {
+                                if (!undo) {
+                                    salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) + game.getValue().Sales);
+                                } else {
+                                    salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) - game.getValue().Sales);
+                                }
+                                break;
+                            }
+                        }
+                        //If we've checked every row and neither was a match it doesnt exist
+                        if (!undo && row == currentLastRow) {
+                            CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
+                            CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
+                            CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
+                            salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
+                            salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
+                            salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                            CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
+                            salesByGameSheet.addMergedRegion(gameCellsRange);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void salesByGameFreshRecords() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        int currentLastRow;
+        for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
+            for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    currentLastRow = salesByGameSheet.getLastRowNum() + 1;
+                    if (currentLastRow < Constants.OVERALL_SALES_BY_GAME_FIRST_ROW) {
+                        CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
+                        CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
+                        CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
+                        salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
+                        salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
+                        salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                        CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
+                        salesByGameSheet.addMergedRegion(gameCellsRange);
+                        continue;
+                    }
+                    for (int row = Constants.OVERALL_SALES_BY_GAME_FIRST_ROW; row <= currentLastRow; row++) {
+                        CellReference platformCellRef = new CellReference("A" + row);
+                        Cell platformCell = salesByGameSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol());
+                        CellReference gameCellRef = new CellReference("B" + row);
+                        Cell gameCell = salesByGameSheet.getRow(gameCellRef.getRow()).getCell(gameCellRef.getCol());
+                        CellReference salesCellRef = new CellReference("E" + row);
+                        Cell salesCell = salesByGameSheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
+                        if (platformCell.getStringCellValue().equals(platform.getKey())) {
+                            if (gameCell.getStringCellValue().equals(game.getKey())) {
+                                salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) + game.getValue().Sales);
+                                break;
+                            }
+                        }
+                        if (row == currentLastRow) {
+                            CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
+                            CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
+                            CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
+                            salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
+                            salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
+                            salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                            CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
+                            salesByGameSheet.addMergedRegion(gameCellsRange);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     protected void formatDataHashMap() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        for (Platforms platform : Platforms.values()) {
+            newData.entrySet().stream().filter((store) -> (!store.getValue().containsKey(platform.toString()))).forEachOrdered((store) -> {
+                store.getValue().put(platform.toString(), new HashMap<>());
+            });
+        }
     }
     //TODO abstract methods!
 
@@ -556,4 +673,12 @@ public abstract class ReportManager {
      * @return week number.
      */
     protected abstract int getWeekNumber();
+
+    protected abstract void readInputData();
+
+    protected abstract boolean getSourceFileSignature();
+
+    protected abstract String getShopOnRow(int row);
+
+    protected abstract boolean generateReport();
 }
