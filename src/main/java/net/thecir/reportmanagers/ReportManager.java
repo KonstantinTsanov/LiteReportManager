@@ -26,6 +26,7 @@ package net.thecir.reportmanagers;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,8 +45,12 @@ import lombok.extern.java.Log;
 import net.thecir.constants.Constants;
 import net.thecir.enums.ExcelWorkbookType;
 import net.thecir.enums.Platforms;
+import net.thecir.exceptions.InputFileContainsNoValidDateException;
 import net.thecir.exceptions.OutputFileIsFullException;
 import net.thecir.exceptions.OutputFileNoRecordsFoundException;
+import net.thecir.exceptions.OutputFileNotCorrectException;
+import net.thecir.exceptions.InputFileNotMatchingSelectedFileException;
+import net.thecir.exceptions.OutputFileIOException;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -83,6 +89,8 @@ public abstract class ReportManager {
     //Input and output sheets
     private Workbook inputWorkbook;
     private XSSFWorkbook outputWorkbook;
+
+    private File outputWorkbookFile;
     //xls or xlsx
     private ExcelWorkbookType inputWorkbookType;
 
@@ -104,11 +112,12 @@ public abstract class ReportManager {
      */
     protected HashMap<String, HashMap<String, HashMap<String, StockSales>>> newData = new HashMap<>();
 
-    public ReportManager(File inputFilePath, File outputFilePath, boolean undo) {
+    public ReportManager(File inputWorkbookFile, File outputWorkbookFile, boolean undo) {
+        this.outputWorkbookFile = outputWorkbookFile;
         this.undo = undo;
         rb = ResourceBundle.getBundle("CoreBundle");
         try {
-            outputWorkbook = new XSSFWorkbook(outputFilePath);
+            outputWorkbook = new XSSFWorkbook(outputWorkbookFile);
         } catch (IOException ex) {
             //TODO
             log.log(Level.SEVERE, null, ex);
@@ -116,7 +125,7 @@ public abstract class ReportManager {
             log.log(Level.SEVERE, null, ex);
         }
         if (inputWorkbookType == ExcelWorkbookType.XLS) {
-            try (InputStream is = new FileInputStream(inputFilePath)) {
+            try (InputStream is = new FileInputStream(inputWorkbookFile)) {
                 inputWorkbook = new HSSFWorkbook(is);
             } catch (FileNotFoundException ex) {
                 //TODO
@@ -126,7 +135,7 @@ public abstract class ReportManager {
             }
         } else {
             try {
-                outputWorkbook = new XSSFWorkbook(inputFilePath);
+                outputWorkbook = new XSSFWorkbook(inputWorkbookFile);
             } catch (IOException ex) {
                 //TODO
                 log.log(Level.SEVERE, null, ex);
@@ -137,7 +146,30 @@ public abstract class ReportManager {
 
     }
 
-    protected void writeToSheet() throws OutputFileIsFullException, OutputFileNoRecordsFoundException {
+    protected void generateReport() throws OutputFileIsFullException,
+            OutputFileNoRecordsFoundException, InputFileNotMatchingSelectedFileException,
+            OutputFileNotCorrectException, OutputFileIOException, InputFileContainsNoValidDateException {
+        if (!isOutputFileCorrect()) {
+            throw new OutputFileNotCorrectException("The destionation file isn't correct. Select another file or create new.");
+        }
+        if (!isInputFileCorrect()) {
+            throw new InputFileNotMatchingSelectedFileException("The source file isn't from the selected retailer.");
+        }
+        formatDataHashMap();
+        readInputData();
+        writeToSheet();
+        try (FileOutputStream fileOut = new FileOutputStream(outputWorkbookFile)) {
+            outputWorkbook.write(fileOut);
+        } catch (FileNotFoundException ex) {
+            log.log(Level.SEVERE, "The file to save the workbook in was not found.", ex);
+            throw new OutputFileIOException("The file to save the workbook in was not found.");
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "There's an IO problem with the output file.", ex);
+            throw new OutputFileIOException("There's an IO problem with the output file.");
+        }
+    }
+
+    protected void writeToSheet() throws OutputFileIsFullException, OutputFileNoRecordsFoundException, InputFileContainsNoValidDateException {
         if (!undo) {
             writeWeeklyReport();
         } else {
@@ -149,7 +181,7 @@ public abstract class ReportManager {
         writeTopFiveStatistics();
     }
 
-    private void writeWeeklyReport() throws OutputFileIsFullException {
+    private void writeWeeklyReport() throws OutputFileIsFullException, InputFileContainsNoValidDateException {
         int weekNo = getWeekNumber();
         for (int column = Constants.SELLOUT_TABLE_FIRST_COLUMN; column <= Constants.SELLOUT_TABLE_LAST_COLUMN; column++) {
             CellReference weekCellRef = new CellReference(Constants.PLATFORMS_TABLE_WEEK_ROW - 1, column - 1);
@@ -185,7 +217,7 @@ public abstract class ReportManager {
         }
     }
 
-    private void undoWeeklyReport() throws OutputFileNoRecordsFoundException {
+    private void undoWeeklyReport() throws OutputFileNoRecordsFoundException, InputFileContainsNoValidDateException {
         int weekNo = getWeekNumber();
         HashMap<String, StockSales> stockAndSalesByPlatform = getStockSalesByPlatform();
         int columnToRemove = findWeekToUndo(stockAndSalesByPlatform, weekNo);
@@ -312,7 +344,7 @@ public abstract class ReportManager {
         }
     }
 
-    private boolean outputFileSignature() {
+    private boolean isOutputFileCorrect() {
         CellReference firstSheetLabelCellRef = new CellReference("A1");
         CellReference firstSheetStockLabelCellRef = new CellReference("BG1");
         if (outputWorkbook.getNumberOfSheets() != 4) {
@@ -671,14 +703,14 @@ public abstract class ReportManager {
      * Get week number from the input file.
      *
      * @return week number.
+     * @throws net.thecir.exceptions.InputFileContainsNoValidDateException
      */
-    protected abstract int getWeekNumber();
+    protected abstract int getWeekNumber() throws InputFileContainsNoValidDateException;
 
     protected abstract void readInputData();
 
-    protected abstract boolean getSourceFileSignature();
+    protected abstract boolean isInputFileCorrect();
 
     protected abstract String getShopOnRow(int row);
 
-    protected abstract boolean generateReport();
 }
