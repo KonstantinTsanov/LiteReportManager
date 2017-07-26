@@ -36,6 +36,12 @@ public class TechnomarketReportManager extends ReportManager {
     }
 
     @Override
+    protected void formatDataHashMap() {
+
+        super.formatDataHashMap();
+    }
+
+    @Override
     protected int getWeekNumber() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -46,7 +52,7 @@ public class TechnomarketReportManager extends ReportManager {
     }
 
     @Override
-    protected boolean getSourceFileSignature() {
+    protected boolean isInputFileCorrect() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -54,10 +60,4 @@ public class TechnomarketReportManager extends ReportManager {
     protected String getShopOnRow(int row) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-
-    @Override
-    protected boolean generateReport() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
 }
