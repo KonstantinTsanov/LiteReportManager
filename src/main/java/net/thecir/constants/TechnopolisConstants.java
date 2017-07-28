@@ -24,17 +24,16 @@
 package net.thecir.constants;
 
 /**
+ * All constants are zero-based here.
  *
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public final class TechnopolisConstants {
 
-    /**
-     * Zero-based constant.
-     */
+    public static int ITEM_COLUMN = 0;
+    public static int GAME_DESCR_COLUMN = 1;
     public static int SHOP_COLUMN = 2;
-    /**
-     * Zero-based constant.
-     */
+    public static int SOLD_QUANTITY_COLUMN = 3;
+    public static int STOCK_COLUMN = 4;
     public static int FIRST_ROW = 0;
 }
