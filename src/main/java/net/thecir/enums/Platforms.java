@@ -30,24 +30,27 @@ import lombok.Getter;
  * @author Konstantin Tsanov <k.tsanov@gmail.com>
  */
 public enum Platforms {
-    PS2("P2", "PS2"),
-    PS3("P3", "PS3"),
-    PS4("P4", "PS4"),
-    XBOX360("XB3", "XBOX360"),
-    XBOXONE("XBO", "XBOXONE"),
-    WII("WII", "WII"),
-    PSP("PSP", "PSP"),
-    DS3("3D", "3DS"),
-    PSVITA("PSV", "PSVITA"),
-    PC("PC", "PC"),
-    NDS("DS", "NDS"),
-    Other("Other", "Other");
+    PS2("PS2", "P2", "PS2"),
+    PS3("PS3", "P3", "PS3"),
+    PS4("PS4", "P4", "PS4"),
+    XBOX360("XBOX360", "XB3", "XBOX360"),
+    XBOXONE("XBOXONE", "XBO", "XBOXONE"),
+    WII("WII", "WII", "WII"),
+    PSP("PSP", "PSP", "PSP"),
+    DS3("3DS", "3D", "3DS"),
+    PSVITA("PSVITA", "PSV", "PSVITA"),
+    PC("PC", "PC", "PC"),
+    NDS("NDS", "DS", "NDS"),
+    Other("Other", "Other", "Other");
+    @Getter
+    private final String outputAbbreviation;
     @Getter
     private final String technopolisAbbreviation;
     @Getter
     private final String technomarketAbbreviation;
 
-    private Platforms(String technopolisAbbreviation, String technomarketAbbreviation) {
+    private Platforms(String outputAbbreviation, String technopolisAbbreviation, String technomarketAbbreviation) {
+        this.outputAbbreviation = outputAbbreviation;
         this.technopolisAbbreviation = technopolisAbbreviation;
         this.technomarketAbbreviation = technomarketAbbreviation;
     }
