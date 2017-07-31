@@ -30,12 +30,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -56,13 +56,16 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CellValue;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.ss.util.CellUtil;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
@@ -88,7 +91,7 @@ public abstract class ReportManager {
     }
     //Input and output sheets
     private Workbook inputWorkbook;
-    private XSSFWorkbook outputWorkbook;
+    private Workbook outputWorkbook;
 
     private File outputWorkbookFile;
     //xls or xlsx
@@ -98,11 +101,13 @@ public abstract class ReportManager {
     protected Sheet inputDataSheet;
 
     //Output worksheets
-    protected XSSFSheet weeklyReportSheet;
-    protected XSSFSheet topFiveSheet;
-    protected XSSFSheet salesByPlatformSheet;
-    protected XSSFSheet salesByGameSheet;
+    protected Sheet weeklyReportSheet;
+    protected Sheet topFiveSheet;
+    protected Sheet salesByPlatformSheet;
+    protected Sheet salesByGameSheet;
 
+    //Evaluator is needed to evaluate the cells before getting the value, otherwise we get incorrect results.
+    protected FormulaEvaluator evaluator;
     //Indicated whether the user is adding or removing
     protected boolean undo;
 
@@ -110,14 +115,16 @@ public abstract class ReportManager {
     /**
      * Shop, platform, game, stock/sales.
      */
-    protected HashMap<String, HashMap<String, HashMap<String, StockSales>>> newData = new HashMap<>();
+    protected HashMap<String, HashMap<String, HashMap<String, StockSales>>> newData;
 
     public ReportManager(File inputWorkbookFile, File outputWorkbookFile, boolean undo) {
         this.outputWorkbookFile = outputWorkbookFile;
         this.undo = undo;
-        rb = ResourceBundle.getBundle("CoreBundle");
+        newData = new HashMap<>();
+        rb = ResourceBundle.getBundle("LanguageBundles/Bundle");
         try {
-            outputWorkbook = new XSSFWorkbook(outputWorkbookFile);
+            //TODO Input stream resource
+            outputWorkbook = WorkbookFactory.create(new FileInputStream(outputWorkbookFile));
         } catch (IOException ex) {
             //TODO
             log.log(Level.SEVERE, null, ex);
@@ -135,7 +142,7 @@ public abstract class ReportManager {
             }
         } else {
             try {
-                outputWorkbook = new XSSFWorkbook(inputWorkbookFile);
+                inputWorkbook = new XSSFWorkbook(inputWorkbookFile);
             } catch (IOException ex) {
                 //TODO
                 log.log(Level.SEVERE, null, ex);
@@ -143,10 +150,15 @@ public abstract class ReportManager {
                 log.log(Level.SEVERE, null, ex);
             }
         }
-
+        inputDataSheet = inputWorkbook.getSheetAt(0);
+        weeklyReportSheet = outputWorkbook.getSheetAt(0);
+        topFiveSheet = outputWorkbook.getSheetAt(1);
+        salesByPlatformSheet = outputWorkbook.getSheetAt(2);
+        salesByGameSheet = outputWorkbook.getSheetAt(3);
+        evaluator = outputWorkbook.getCreationHelper().createFormulaEvaluator();
     }
 
-    protected void generateReport() throws OutputFileIsFullException,
+    public void generateReport() throws OutputFileIsFullException,
             OutputFileNoRecordsFoundException, InputFileNotMatchingSelectedFileException,
             OutputFileNotCorrectException, OutputFileIOException, InputFileContainsNoValidDateException {
         if (!isOutputFileCorrect()) {
@@ -159,6 +171,7 @@ public abstract class ReportManager {
         readInputData();
         writeToSheet();
         try (FileOutputStream fileOut = new FileOutputStream(outputWorkbookFile)) {
+            XSSFFormulaEvaluator.evaluateAllFormulaCells(outputWorkbook);
             outputWorkbook.write(fileOut);
         } catch (FileNotFoundException ex) {
             log.log(Level.SEVERE, "The file to save the workbook in was not found.", ex);
@@ -185,7 +198,7 @@ public abstract class ReportManager {
         int weekNo = getWeekNumber();
         for (int column = Constants.SELLOUT_TABLE_FIRST_COLUMN; column <= Constants.SELLOUT_TABLE_LAST_COLUMN; column++) {
             CellReference weekCellRef = new CellReference(Constants.PLATFORMS_TABLE_WEEK_ROW - 1, column - 1);
-            if (weeklyReportSheet.getRow(weekCellRef.getRow()).getCell(weekCellRef.getCol()).getCellTypeEnum() != CellType.BLANK) {
+            if (!"".equals(weeklyReportSheet.getRow(weekCellRef.getRow()).getCell(weekCellRef.getCol()).getStringCellValue())) {
                 if (column == Constants.SELLOUT_TABLE_LAST_COLUMN) {
                     throw new OutputFileIsFullException(rb.getString("OutputFileIsFullExceptionMessage"));
                 }
@@ -194,9 +207,10 @@ public abstract class ReportManager {
             HashMap<String, StockSales> stockAndSalesByPlatform = getStockSalesByPlatform();
             CellReference latestWeekStockCellRef = new CellReference("BI" + Constants.PLATFORMS_TABLE_WEEK_ROW);
             //Set the current report's week
-            weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()).setCellValue("Stock w" + weekNo);
+            CellUtil.getRow(latestWeekStockCellRef.getRow(), weeklyReportSheet)
+                    .getCell(latestWeekStockCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue("Stock w" + weekNo);
             weeklyReportSheet.getRow(weekCellRef.getRow()).getCell(weekCellRef.getCol()).setCellValue("w" + weekNo);
-            for (int row = Constants.PLATFORM_HEADER_LAST_ROW; row < Platforms.values().length; row++) {
+            for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row <= Constants.PLATFORM_HEADER_LAST_ROW; row++) {
                 CellReference currentOutputAbbreviationRef = new CellReference("B" + row);
                 String currentOutputAbbreviation = weeklyReportSheet.getRow(currentOutputAbbreviationRef.getRow())
                         .getCell(currentOutputAbbreviationRef.getCol()).getStringCellValue();
@@ -256,7 +270,8 @@ public abstract class ReportManager {
                 }
                 for (int rowToDeleteOn = Constants.PLATFORM_HEADER_FIRST_ROW; rowToDeleteOn < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; rowToDeleteOn++) {
                     CellReference stockCellToBeRemoved = new CellReference("BI" + rowToDeleteOn);
-                    weeklyReportSheet.getRow(stockCellToBeRemoved.getRow()).getCell(stockCellToBeRemoved.getCol()).setCellValue(Constants.NO_DATA);
+                    weeklyReportSheet.getRow(stockCellToBeRemoved.getRow())
+                            .getCell(stockCellToBeRemoved.getCol()).setCellValue(Constants.NO_DATA);
                 }
             }
         }
@@ -291,11 +306,13 @@ public abstract class ReportManager {
         boolean recordExists = false;
         for (int column = Constants.SELLOUT_TABLE_FIRST_COLUMN; column <= Constants.SELLOUT_TABLE_LAST_COLUMN; column++) {
             CellReference weeklyHeaderCellRef = new CellReference(Constants.PLATFORMS_TABLE_WEEK_ROW - 1, column - 1);
-            if (!"w".concat(Integer.toString(weekNo)).equals(weeklyReportSheet.getRow(weeklyHeaderCellRef.getRow()).getCell(weeklyHeaderCellRef.getCol()).getStringCellValue())) {
+            if (!"w".concat(Integer.toString(weekNo)).equals(weeklyReportSheet.getRow(weeklyHeaderCellRef.getRow())
+                    .getCell(weeklyHeaderCellRef.getCol()).getStringCellValue())) {
                 if (column == Constants.SELLOUT_TABLE_LAST_COLUMN && !recordExists) {
                     throw new OutputFileNoRecordsFoundException(rb.getString("OutputFileNoRecordsFoundExceptionMessage"));
                 }
-            } else if ("w".concat(Integer.toString(weekNo)).equals(weeklyReportSheet.getRow(weeklyHeaderCellRef.getRow()).getCell(weeklyHeaderCellRef.getCol()).getStringCellValue())) {
+            } else if ("w".concat(Integer.toString(weekNo)).equals(weeklyReportSheet.getRow(weeklyHeaderCellRef.getRow())
+                    .getCell(weeklyHeaderCellRef.getCol()).getStringCellValue())) {
                 recordExists = true;
                 columnsMatchingWeeklyHeader.add(column);
             }
@@ -312,7 +329,7 @@ public abstract class ReportManager {
                     }
                     continueSearching = true;
                     break;
-                } else if (Integer.parseInt(weeklyReportSheet.getRow(currentValueCellRef.getRow()).getCell(currentValueCellRef.getCol()).getStringCellValue())
+                } else if (weeklyReportSheet.getRow(currentValueCellRef.getRow()).getCell(currentValueCellRef.getCol()).getNumericCellValue()
                         != newData.get(weeklyReportSheet.getRow(currentPlatformCellRef.getRow()).getCell(currentPlatformCellRef.getCol()).getStringCellValue()).Sales) {
                     continueSearching = true;
                     break;
@@ -368,19 +385,16 @@ public abstract class ReportManager {
 
     private void topFiveShopsBySalesOverall() {
         HashMap<String, Integer> gamesAndSales = new HashMap<>();
-        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= salesByPlatformSheet.getLastRowNum() + 1; row++) {
+        final int lastRowUsed = salesByPlatformSheet.getLastRowNum();
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= lastRowUsed; row++) {
             CellReference totalCellRef = new CellReference("P" + row);
-            int num;
             Cell totalCell = salesByPlatformSheet.getRow(totalCellRef.getRow()).getCell(totalCellRef.getCol());
-            if (NumberUtils.isParsable(totalCell.getStringCellValue())) {
-                num = Integer.parseInt(totalCell.getStringCellValue());
-            } else {
-                continue;
-            }
+            CellValue totalCellValue = evaluator.evaluate(totalCell);
             CellReference shopCellRef = new CellReference("A" + row);
-            gamesAndSales.put(salesByPlatformSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).getStringCellValue(), num);
+            Cell shopCell = CellUtil.getRow(shopCellRef.getRow(), salesByPlatformSheet).getCell(shopCellRef.getCol());
+            gamesAndSales.put(shopCell.getStringCellValue(), (int) totalCellValue.getNumberValue());
         }
-        List<Entry<String, Integer>> sortedGamesAndSales = gamesAndSales.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        List<Entry<String, Integer>> sortedGamesAndSales = gamesAndSales.entrySet().stream().sorted(Entry.comparingByValue(Collections.reverseOrder())).collect(Collectors.toList());
         for (int row = Constants.TOP_FIVE_TOP_FIRST_ROW; row <= Constants.TOP_FIVE_TOP_LAST_ROW; row++) {
             if (gamesAndSales.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
                 CellReference shopCellRef = new CellReference("C" + row);
@@ -393,7 +407,8 @@ public abstract class ReportManager {
 
     private void topFiveGamesBySalesOverall() {
         HashMap<String, HashMap<String, Integer>> platformsGamesAndSales = new HashMap<>();
-        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= salesByGameSheet.getLastRowNum(); row++) {
+        final int lastRowUsed = salesByGameSheet.getLastRowNum() + 1;
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= lastRowUsed; row++) {
             CellReference platformCellRef = new CellReference("A" + row);
             CellReference gameCellRef = new CellReference("B" + row);
             CellReference salesCellRef = new CellReference("E" + row);
@@ -402,15 +417,11 @@ public abstract class ReportManager {
             Cell salesCell = salesByGameSheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
             if (platformsGamesAndSales.containsKey(platformCell.getStringCellValue())) {
                 if (!platformsGamesAndSales.get(platformCell.getStringCellValue()).containsKey(gameCell.getStringCellValue())) {
-                    int sales;
-                    if (NumberUtils.isParsable(salesCell.getStringCellValue())) {
-                        sales = Integer.parseInt(salesCell.getStringCellValue());
-                        platformsGamesAndSales.get(platformCell.getStringCellValue()).put(gameCell.getStringCellValue(), sales);
-                    }
+                    platformsGamesAndSales.get(platformCell.getStringCellValue()).put(gameCell.getStringCellValue(), (int) salesCell.getNumericCellValue());
                 }
             } else {
                 platformsGamesAndSales.put(platformCell.getStringCellValue(), new HashMap<>());
-                platformsGamesAndSales.get(platformCell.getStringCellValue()).put(gameCell.getStringCellValue(), Integer.parseInt(salesCell.getStringCellValue()));
+                platformsGamesAndSales.get(platformCell.getStringCellValue()).put(gameCell.getStringCellValue(), (int) salesCell.getNumericCellValue());
             }
         }
         List<Entry<String, HashMap<String, Integer>>> gamesAndSalesList = platformsGamesAndSales.entrySet().stream().collect(Collectors.toList());
@@ -420,14 +431,14 @@ public abstract class ReportManager {
                 combinedPlatformsAndGames.put(platform.getKey() + " " + game.getKey(), game.getValue());
             }
         }
-        List<Entry<String, Integer>> sortedCombined = combinedPlatformsAndGames.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        List<Entry<String, Integer>> sortedCombined = combinedPlatformsAndGames.entrySet().stream().sorted(Entry.comparingByValue(Collections.reverseOrder())).collect(Collectors.toList());
 
         for (int row = Constants.TOP_FIVE_BOTTOM_FIRST_ROW; row <= Constants.TOP_FIVE_BOTTOM_LAST_ROW; row++) {
-            if (sortedCombined.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
+            if (sortedCombined.size() > row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW) {
                 CellReference shopCellRef = new CellReference("C" + row);
                 CellReference stockCellRef = new CellReference("H" + row);
-                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedCombined.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
-                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedCombined.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
+                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedCombined.get(row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW).getKey());
+                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedCombined.get(row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW).getValue());
             }
         }
     }
@@ -444,13 +455,15 @@ public abstract class ReportManager {
                 }
             }
         }
-        List<Entry<String, Integer>> sortedShopsAndSalesList = shopsAndSales.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        List<Entry<String, Integer>> sortedShopsAndSalesList = shopsAndSales.entrySet().stream().sorted(Entry.comparingByValue(Collections.reverseOrder())).collect(Collectors.toList());
         for (int row = Constants.TOP_FIVE_TOP_FIRST_ROW; row <= Constants.TOP_FIVE_TOP_LAST_ROW; row++) {
             if (sortedShopsAndSalesList.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
                 CellReference shopCellRef = new CellReference("K" + row);
                 CellReference stockCellRef = new CellReference("P" + row);
-                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
-                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
+                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol())
+                        .setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
+                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol())
+                        .setCellValue(sortedShopsAndSalesList.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
             }
         }
     }
@@ -461,20 +474,23 @@ public abstract class ReportManager {
             for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
                 for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
                     if (platformsGamesAndSales.containsKey(platform.getKey() + " " + game.getKey())) {
-                        platformsGamesAndSales.put(platform.getKey() + " " + game.getKey(), platformsGamesAndSales.get(platform.getKey() + " " + game.getKey()) + game.getValue().Sales);
+                        platformsGamesAndSales.put(platform.getKey() + " " + game.getKey(),
+                                platformsGamesAndSales.get(platform.getKey() + " " + game.getKey()) + game.getValue().Sales);
                     } else {
                         platformsGamesAndSales.put(platform.getKey() + " " + game.getKey(), game.getValue().Sales);
                     }
                 }
             }
         }
-        List<Entry<String, Integer>> sortedPlatformsGamesAndSales = platformsGamesAndSales.entrySet().stream().sorted(Entry.comparingByValue()).collect(Collectors.toList());
+        List<Entry<String, Integer>> sortedPlatformsGamesAndSales = platformsGamesAndSales.entrySet().stream().sorted(Entry.comparingByValue(Collections.reverseOrder())).collect(Collectors.toList());
         for (int row = Constants.TOP_FIVE_BOTTOM_FIRST_ROW; row <= Constants.TOP_FIVE_BOTTOM_LAST_ROW; row++) {
-            if (sortedPlatformsGamesAndSales.size() > row - Constants.TOP_FIVE_TOP_FIRST_ROW) {
+            if (sortedPlatformsGamesAndSales.size() > row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW) {
                 CellReference shopCellRef = new CellReference("K" + row);
                 CellReference stockCellRef = new CellReference("P" + row);
-                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol()).setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getKey());
-                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol()).setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_TOP_FIRST_ROW).getValue());
+                topFiveSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol())
+                        .setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW).getKey());
+                topFiveSheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol())
+                        .setCellValue(sortedPlatformsGamesAndSales.get(row - Constants.TOP_FIVE_BOTTOM_FIRST_ROW).getValue());
             }
         }
     }
@@ -492,16 +508,16 @@ public abstract class ReportManager {
         for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
             if (!currentStatistics.containsKey(shop.getKey())) {
                 currentStatistics.put(shop.getKey(), new HashMap<>());
-                for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
-                    if (!currentStatistics.get(shop.getKey()).containsKey(platform.getKey())) {
-                        currentStatistics.get(shop.getKey()).put(platform.getKey(), 0);
-                    }
-                    for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
-                        if (!undo) {
-                            currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) + game.getValue().Sales);
-                        } else {
-                            currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) - game.getValue().Sales);
-                        }
+            }
+            for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
+                if (!currentStatistics.get(shop.getKey()).containsKey(platform.getKey())) {
+                    currentStatistics.get(shop.getKey()).put(platform.getKey(), 0);
+                }
+                for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
+                    if (!undo) {
+                        currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) + game.getValue().Sales);
+                    } else {
+                        currentStatistics.get(shop.getKey()).put(platform.getKey(), currentStatistics.get(shop.getKey()).get(platform.getKey()) - game.getValue().Sales);
                     }
                 }
             }
@@ -509,7 +525,11 @@ public abstract class ReportManager {
         List<Entry<String, HashMap<String, Integer>>> newStatistics = currentStatistics.entrySet().stream().collect(Collectors.toList());
         for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row < newStatistics.size() + Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row++) {
             CellRangeAddress shopNameCellAddress = CellRangeAddress.valueOf("A" + row + ":C" + row);
-            salesByPlatformSheet.addMergedRegion(shopNameCellAddress);
+            try {
+                salesByPlatformSheet.addMergedRegion(shopNameCellAddress);
+            } catch (IllegalStateException ex) {
+                //merged cells already exist. proceed
+            }
             CellReference shopCellRef = new CellReference(row - 1, 0);
             Row shopRow = CellUtil.getRow(shopCellRef.getRow(), salesByPlatformSheet);
             Cell shopCell = salesByPlatformSheet.getRow(shopRow.getRowNum()).getCell(shopCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
@@ -520,11 +540,12 @@ public abstract class ReportManager {
             totalCell.setCellType(CellType.FORMULA);
             totalCell.setCellFormula("SUM(D" + row + ":O" + row + ")");
             for (Entry<String, Integer> platform : newStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().entrySet()) {
-                for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column < Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; row++) {
-                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL - 1, column - 1);
-                    if (salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue().equals(platform.getKey())) {
+                for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column < Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; column++) {
+                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_HEADER_ROW - 1, column - 1);
+                    if (salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol()).getStringCellValue().equals(platform.getKey())) {
                         CellReference platformSalesCellRef = new CellReference(row - 1, column - 1);
-                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow()).getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(platform.getValue());
+                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow()).getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+                                .setCellValue(platform.getValue());
                     }
                 }
             }
@@ -545,16 +566,19 @@ public abstract class ReportManager {
             Cell totalCell = salesByPlatformSheet.getRow(totalRow.getRowNum()).getCell(totalCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             totalCell.setCellType(CellType.FORMULA);
             totalCell.setCellFormula("SUM(D" + row + ":O" + row + ")");
+
             for (Entry<String, HashMap<String, StockSales>> platform : currentStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().entrySet()) {
                 int sumSales = 0;
                 for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
                     sumSales += currentStatistics.get(row - Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW).getValue().get(platform.getKey()).get(game.getKey()).Sales;
                 }
                 for (int column = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL; column < Constants.OVERALL_SALES_BY_PLATFORM_LAST_COL; column++) {
-                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_FIRST_COL - 1, column - 1);
-                    if (salesByPlatformSheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue().equals(platform.getKey())) {
+                    CellReference platformCellRef = new CellReference(Constants.OVERALL_SALES_BY_PLATFORM_HEADER_ROW - 1, column - 1);
+                    if (salesByPlatformSheet.getRow(platformCellRef.getRow())
+                            .getCell(platformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).getStringCellValue().equals(platform.getKey())) {
                         CellReference platformSalesCellRef = new CellReference(row - 1, column - 1);
-                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow()).getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(sumSales);
+                        salesByPlatformSheet.getRow(platformSalesCellRef.getRow())
+                                .getCell(platformSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(sumSales);
                     }
                 }
             }
@@ -566,7 +590,7 @@ public abstract class ReportManager {
         for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= salesByPlatformSheet.getLastRowNum(); row++) {
             CellReference shopCellRef = new CellReference(row - 1, 0);
             Cell shopCell = salesByPlatformSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol());
-            if (shopCell.getCellTypeEnum() == CellType.BLANK) {
+            if ("".equals(shopCell.getStringCellValue())) {
                 continue;
             }
             if (!shopPlatformSales.containsKey(shopCell.getStringCellValue())) {
@@ -579,13 +603,13 @@ public abstract class ReportManager {
                     }
                     if (!shopPlatformSales.get(shopCell.getStringCellValue()).containsKey(platformCell.getStringCellValue())) {
                         CellReference platformSalesValueCellRef = new CellReference(row - 1, column - 1);
-                        Cell platformSalesValueCell = salesByPlatformSheet.getRow(platformSalesValueCellRef.getRow()).getCell(platformSalesValueCellRef.getCol());
-                        if (platformSalesValueCell.getCellTypeEnum() != CellType.BLANK && NumberUtils.isParsable(platformSalesValueCell.getStringCellValue())) {
-                            int platformSalesParsed = Integer.parseInt(platformSalesValueCell.getStringCellValue());
+                        Cell platformSalesValueCell = CellUtil.getRow(platformSalesValueCellRef.getRow(), salesByPlatformSheet)
+                                .getCell(platformSalesValueCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                        if (platformSalesValueCell.getCellTypeEnum() != CellType.BLANK) {
                             shopPlatformSales.get(shopCell.getStringCellValue()).put(platformCell.getStringCellValue(), 0);
                             shopPlatformSales.get(shopCell.getStringCellValue())
                                     .put(platformCell.getStringCellValue(), shopPlatformSales.get(shopCell.getStringCellValue())
-                                            .get(platformCell.getStringCellValue()) + platformSalesParsed);
+                                            .get(platformCell.getStringCellValue()) + (int) platformSalesValueCell.getNumericCellValue());
                         }
                     }
                 }
@@ -618,11 +642,11 @@ public abstract class ReportManager {
                         CellReference salesCellRef = new CellReference("E" + row);
                         Cell salesCell = salesByGameSheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
                         if (platformCell.getStringCellValue().equals(platform.getKey())) {
-                            if (salesCell.getStringCellValue().equals(game.getKey())) {
+                            if (gameCell.getStringCellValue().equals(game.getKey())) {
                                 if (!undo) {
-                                    salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) + game.getValue().Sales);
+                                    salesCell.setCellValue(salesCell.getNumericCellValue() + game.getValue().Sales);
                                 } else {
-                                    salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) - game.getValue().Sales);
+                                    salesCell.setCellValue(salesCell.getNumericCellValue() - game.getValue().Sales);
                                 }
                                 break;
                             }
@@ -632,9 +656,12 @@ public abstract class ReportManager {
                             CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
                             CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
                             CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
-                            salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
-                            salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
-                            salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                            CellUtil.getRow(nextRowPlatformCellRef.getRow(), salesByGameSheet)
+                                    .getCell(nextRowPlatformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(platform.getKey());
+                            CellUtil.getRow(nextRowGameCellRef.getRow(), salesByGameSheet)
+                                    .getCell(nextRowGameCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getKey());
+                            CellUtil.getRow(nextRowSalesCellRef.getRow(), salesByGameSheet)
+                                    .getCell(nextRowSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getValue().Sales);
                             CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
                             salesByGameSheet.addMergedRegion(gameCellsRange);
                         }
@@ -645,18 +672,17 @@ public abstract class ReportManager {
     }
 
     private void salesByGameFreshRecords() {
-        int currentLastRow;
         for (Entry<String, HashMap<String, HashMap<String, StockSales>>> shop : newData.entrySet()) {
             for (Entry<String, HashMap<String, StockSales>> platform : shop.getValue().entrySet()) {
                 for (Entry<String, StockSales> game : platform.getValue().entrySet()) {
-                    currentLastRow = salesByGameSheet.getLastRowNum() + 1;
+                    int currentLastRow = salesByGameSheet.getLastRowNum() + 1;
                     if (currentLastRow < Constants.OVERALL_SALES_BY_GAME_FIRST_ROW) {
                         CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
                         CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
                         CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
-                        salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
-                        salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
-                        salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                        CellUtil.getRow(nextRowPlatformCellRef.getRow(), salesByGameSheet).getCell(nextRowPlatformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(platform.getKey());
+                        CellUtil.getRow(nextRowGameCellRef.getRow(), salesByGameSheet).getCell(nextRowGameCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getKey());
+                        CellUtil.getRow(nextRowSalesCellRef.getRow(), salesByGameSheet).getCell(nextRowSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getValue().Sales);
                         CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
                         salesByGameSheet.addMergedRegion(gameCellsRange);
                         continue;
@@ -670,7 +696,7 @@ public abstract class ReportManager {
                         Cell salesCell = salesByGameSheet.getRow(salesCellRef.getRow()).getCell(salesCellRef.getCol());
                         if (platformCell.getStringCellValue().equals(platform.getKey())) {
                             if (gameCell.getStringCellValue().equals(game.getKey())) {
-                                salesCell.setCellValue(Integer.parseInt(salesCell.getStringCellValue()) + game.getValue().Sales);
+                                salesCell.setCellValue(salesCell.getNumericCellValue() + game.getValue().Sales);
                                 break;
                             }
                         }
@@ -678,9 +704,9 @@ public abstract class ReportManager {
                             CellReference nextRowPlatformCellRef = new CellReference("A" + (currentLastRow + 1));
                             CellReference nextRowGameCellRef = new CellReference("B" + (currentLastRow + 1));
                             CellReference nextRowSalesCellRef = new CellReference("E" + (currentLastRow + 1));
-                            salesByGameSheet.getRow(nextRowPlatformCellRef.getRow()).getCell(nextRowPlatformCellRef.getCol()).setCellValue(platform.getKey());
-                            salesByGameSheet.getRow(nextRowGameCellRef.getRow()).getCell(nextRowGameCellRef.getCol()).setCellValue(game.getKey());
-                            salesByGameSheet.getRow(nextRowSalesCellRef.getRow()).getCell(nextRowSalesCellRef.getCol()).setCellValue(game.getValue().Sales);
+                            CellUtil.getRow(nextRowPlatformCellRef.getRow(), salesByGameSheet).getCell(nextRowPlatformCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(platform.getKey());
+                            CellUtil.getRow(nextRowGameCellRef.getRow(), salesByGameSheet).getCell(nextRowGameCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getKey());
+                            CellUtil.getRow(nextRowSalesCellRef.getRow(), salesByGameSheet).getCell(nextRowSalesCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue(game.getValue().Sales);
                             CellRangeAddress gameCellsRange = CellRangeAddress.valueOf("B" + (currentLastRow + 1) + ":D" + (currentLastRow + 1));
                             salesByGameSheet.addMergedRegion(gameCellsRange);
                         }
@@ -692,8 +718,8 @@ public abstract class ReportManager {
 
     protected void formatDataHashMap() {
         for (Platforms platform : Platforms.values()) {
-            newData.entrySet().stream().filter((store) -> (!store.getValue().containsKey(platform.toString()))).forEachOrdered((store) -> {
-                store.getValue().put(platform.toString(), new HashMap<>());
+            newData.entrySet().stream().filter((store) -> (!store.getValue().containsKey(platform.getOutputAbbreviation()))).forEachOrdered((store) -> {
+                store.getValue().put(platform.getOutputAbbreviation(), new HashMap<>());
             });
         }
     }
@@ -713,4 +739,5 @@ public abstract class ReportManager {
 
     protected abstract String getShopOnRow(int row);
 
+    protected abstract Cell getCellContainingDate() throws InputFileContainsNoValidDateException;
 }
