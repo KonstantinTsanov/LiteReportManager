@@ -24,6 +24,8 @@
 package net.thecir.reportmanagers;
 
 import java.io.File;
+import net.thecir.exceptions.InputFileContainsNoValidDateException;
+import org.apache.poi.ss.usermodel.Cell;
 
 /**
  *
@@ -58,6 +60,11 @@ public class TechnomarketReportManager extends ReportManager {
 
     @Override
     protected String getShopOnRow(int row) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    protected Cell getCellContainingDate() throws InputFileContainsNoValidDateException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }
