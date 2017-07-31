@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.thecir</groupId>
     <artifactId>LiteReportManager</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>00.00.01</version>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
