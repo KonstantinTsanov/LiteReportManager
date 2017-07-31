@@ -37,7 +37,7 @@ public class Constants {
     public static final int PLATFORM_HEADER_LAST_ROW = PLATFORM_HEADER_FIRST_ROW - 1 + Platforms.values().length;
 
     public static final int SELLOUT_TABLE_FIRST_COLUMN = 3;
-    public static final int SELLOUT_TABLE_LAST_COLUMN = 53;
+    public static final int SELLOUT_TABLE_LAST_COLUMN = 54;
 
     public static final int TOP_FIVE_TOP_FIRST_ROW = 7;
     public static final int TOP_FIVE_TOP_LAST_ROW = 11;
