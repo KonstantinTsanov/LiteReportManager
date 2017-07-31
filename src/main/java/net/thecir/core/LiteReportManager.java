@@ -24,15 +24,28 @@
 package net.thecir.core;
 
 import java.io.File;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
+import net.thecir.enums.Stores;
+import net.thecir.exceptions.InputFileContainsNoValidDateException;
+import net.thecir.exceptions.InputFileNotMatchingSelectedFileException;
 import net.thecir.exceptions.NewFileCreationException;
 import net.thecir.exceptions.OutputFileIOException;
+import net.thecir.exceptions.OutputFileIsFullException;
+import net.thecir.exceptions.OutputFileNoRecordsFoundException;
+import net.thecir.exceptions.OutputFileNotCorrectException;
 import net.thecir.filemanagers.NewFileManager;
+import net.thecir.reportmanagers.ReportManager;
+import net.thecir.reportmanagers.TechnomarketReportManager;
+import net.thecir.reportmanagers.TechnopolisReportManager;
 
 /**
  *
@@ -42,10 +55,12 @@ import net.thecir.filemanagers.NewFileManager;
 public class LiteReportManager {
 
     private final ExecutorService newFileExec = Executors.newFixedThreadPool(1);
+    private final ExecutorService reportGeneratorExec = Executors.newFixedThreadPool(1);
 
     private static LiteReportManager SINGLETON;
 
-    private JTextField outputField;
+    private JFrame parentFrame;
+    private ReportManager reportManager;
 
     public static LiteReportManager getInstance() {
         if (SINGLETON == null) {
@@ -54,30 +69,44 @@ public class LiteReportManager {
         return SINGLETON;
     }
 
-    public void setOutputArea(JTextField field) {
-        this.outputField = field;
+    public void initOutputComponents(JFrame parentFrame) {
+        this.parentFrame = parentFrame;
     }
 
     public void createNewFile() {
         newFileExec.execute(() -> {
             try {
                 File newFile = NewFileManager.getInstance().createNewWorkbook();
-                if (newFile != null) {
-                    outputField.setText(newFile.getAbsolutePath());
-                }
             } catch (OutputFileIOException ex) {
-                //TODO
-                log.log(Level.SEVERE, null, ex);
-                SwingUtilities.invokeLater(() -> {
-                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                });
+                log.log(Level.SEVERE, "An error occured while saving file.", ex);
+                printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
             } catch (NewFileCreationException ex) {
-                //TODO
-                log.log(Level.SEVERE, null, ex);
-                SwingUtilities.invokeLater(() -> {
-                    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                });
+                log.log(Level.SEVERE, "An error occured while creating file.", ex);
+                printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
             }
+        });
+    }
+
+    public void generateReport(File inputFile, File outputFile, boolean undo, Stores store) {
+        reportGeneratorExec.execute(() -> {
+            if (store == Stores.Technopolis) {
+                reportManager = new TechnopolisReportManager(inputFile, outputFile, undo);
+            } else if (store == Stores.Technomarket) {
+                reportManager = new TechnomarketReportManager(inputFile, outputFile, undo);
+            }
+            try {
+                reportManager.generateReport();
+            } catch (OutputFileIsFullException | OutputFileNoRecordsFoundException | InputFileNotMatchingSelectedFileException | OutputFileNotCorrectException | OutputFileIOException | InputFileContainsNoValidDateException ex) {
+                log.log(Level.SEVERE, ex.getMessage(), ex);
+                printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+
+    private void printMessageViaPane(String message, int errorMessage) {
+        SwingUtilities.invokeLater(() -> {
+            ResourceBundle rb = ResourceBundle.getBundle("LanguageBundles/Bundle");
+            JOptionPane.showMessageDialog(parentFrame, message, rb.getString("MessageTitle"), errorMessage);
         });
     }
 }
