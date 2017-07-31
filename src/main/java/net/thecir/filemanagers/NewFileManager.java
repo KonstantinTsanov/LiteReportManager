@@ -26,7 +26,13 @@ package net.thecir.filemanagers;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import net.thecir.callbacks.FileCallback;
 import net.thecir.exceptions.NewFileCreationException;
@@ -43,7 +49,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 @Log
 public class NewFileManager {
 
-    private FileCallback fileCallback;
+    private volatile FileCallback fileCallback;
 
     private static NewFileManager instance;
 
@@ -69,29 +75,58 @@ public class NewFileManager {
             wb = new XSSFWorkbook(defaultXlsx);
             NewFileFormatter formatter = new NewFileFormatter(wb);
             formatter.formatWorkbook();
-            File file = fileCallback.getFile();
-            if (file != null) {
-                if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
-                    if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
-                        file = new File(file.toString() + ".xlsx");
-                    } else {
-                        file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
-                    }
+            FutureTask<File> getFileTask = new FutureTask<>(new Callable<File>() {
+                @Override
+                public File call() {
+                    return fileCallback.getFile();
                 }
-                try (FileOutputStream fileOut = new FileOutputStream(file)) {
-                    wb.write(fileOut);
-                    return file;
-                } catch (IOException ex) {
-                    log.log(Level.SEVERE, "A problem occured while saving file!", ex);
-                    throw new OutputFileIOException("A problem occured while saving file!");
+            });
+            try {
+                SwingUtilities.invokeAndWait(getFileTask);
+            } catch (InterruptedException ex) {
+                log.log(Level.SEVERE, "A thread waiting for the user to select new file to be created has been interrupted.", ex);
+                throw new RuntimeException("Failed to create new file.");
+            } catch (InvocationTargetException ex) {
+                log.log(Level.SEVERE, "Invocation of the runnable to obtain the new file name/path has failed.", ex);
+                throw new RuntimeException("Failed to create new file.");
+            }
+
+            File file = null;
+            try {
+                file = getFileTask.get();
+            } catch (InterruptedException ex) {
+                log.log(Level.SEVERE, "The thread waiting for the user to select new file to be created has been interrupted.", ex);
+                throw new RuntimeException("Failed to create new file.");
+            } catch (ExecutionException ex) {
+                log.log(Level.SEVERE, "Failed to obtain the new file name.", ex);
+                throw new RuntimeException("Failed to create new file.");
+            }
+            if (file == null) {
+                return null;
+            }
+            if (!file.renameTo(file)) {
+                log.log(Level.SEVERE, "The selected output file is in use by another process/program.");
+                throw new OutputFileIOException("A file with the same name already exists and is in use by another program. Please close the file before attempting to save.");
+            }
+            if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
+                if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
+                    file = new File(file.toString() + ".xlsx");
+                } else {
+                    file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
                 }
             }
+            try (FileOutputStream fileOut = new FileOutputStream(file)) {
+                wb.write(fileOut);
+                return file;
+            } catch (IOException ex) {
+                throw new OutputFileIOException("A problem occured while saving file!");
+            }
+
         } catch (OutputFileIOException ex) {
             throw ex;
         } catch (IOException | InvalidFormatException ex) {
             log.log(Level.SEVERE, "A problem occured while getting the default workbook...", ex);
             throw new NewFileCreationException("Cannot create new file!");
         }
-        return null;
     }
 }
