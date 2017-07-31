@@ -190,9 +190,9 @@ public class NewFileFormatter {
             CellReference leftCellRef = new CellReference("B" + rowIter);
             CellReference rightCellRef = new CellReference("BC" + rowIter);
             Cell leftCell = sheet.getRow(leftCellRef.getRow()).getCell(leftCellRef.getCol());
-            leftCell.setCellValue(platform.toString());
+            leftCell.setCellValue(platform.getOutputAbbreviation());
             Cell rightCell = sheet.getRow(rightCellRef.getRow()).getCell(rightCellRef.getCol());
-            rightCell.setCellValue(platform.toString());
+            rightCell.setCellValue(platform.getOutputAbbreviation());
             rowIter++;
         }
         //Sets the total labels to the left and right
@@ -262,7 +262,7 @@ public class NewFileFormatter {
             CellReference platformDaysInStockCellRef = new CellReference("BJ" + rowIter);
             Cell platformLabelCell = sheet.getRow(platformLabelCellRef.getRow()).getCell(platformLabelCellRef.getCol());
             Cell platformDaysInStockCell = sheet.getRow(platformDaysInStockCellRef.getRow()).getCell(platformDaysInStockCellRef.getCol());
-            platformLabelCell.setCellValue(platform.toString());
+            platformLabelCell.setCellValue(platform.getOutputAbbreviation());
             platformDaysInStockCell.setCellType(CellType.FORMULA);
             platformDaysInStockCell.setCellFormula("IF(OR(BI" + rowIter + "=\"" + Constants.NO_DATA + "\",BI" + rowIter + "=\"\"),BI" + rowIter + "&\"\",IFERROR(BI" + rowIter
                     + "/BD" + rowIter + "*7*COUNT(C" + rowIter + ":BB" + rowIter + "),\"\"))");
@@ -306,7 +306,7 @@ public class NewFileFormatter {
         for (Platforms platform : Platforms.values()) {
             CellReference platformCellRef = new CellReference("BM" + rowIter);
             Cell platformCell = sheet.getRow(platformCellRef.getRow()).getCell(platformCellRef.getCol());
-            platformCell.setCellValue(platform.toString());
+            platformCell.setCellValue(platform.getOutputAbbreviation());
             rowIter++;
         }
         //Sets the Total label
@@ -434,7 +434,7 @@ public class NewFileFormatter {
         int iterator = column;
         for (Platforms platform : Platforms.values()) {
             Cell cell = sheet.getRow(row).getCell(iterator, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-            cell.setCellValue(platform.toString());
+            cell.setCellValue(platform.getOutputAbbreviation());
             iterator++;
         }
         Row thirdRow = sheet.getRow(row);
