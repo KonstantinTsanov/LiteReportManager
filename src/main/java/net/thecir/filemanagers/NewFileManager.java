@@ -68,11 +68,10 @@ public class NewFileManager {
     }
 
     public File createNewWorkbook() throws OutputFileIOException, NewFileCreationException {
-        ClassLoader classLoader = getClass().getClassLoader();
-        File defaultXlsx = new File(classLoader.getResource("default.xlsx").getFile());
         XSSFWorkbook wb;
+        System.out.println();
         try {
-            wb = new XSSFWorkbook(defaultXlsx);
+            wb = new XSSFWorkbook(ClassLoader.getSystemResourceAsStream("excel/default.xlsx"));
             NewFileFormatter formatter = new NewFileFormatter(wb);
             formatter.formatWorkbook();
             FutureTask<File> getFileTask = new FutureTask<>(new Callable<File>() {
@@ -124,7 +123,7 @@ public class NewFileManager {
 
         } catch (OutputFileIOException ex) {
             throw ex;
-        } catch (IOException | InvalidFormatException ex) {
+        } catch (IOException ex) {
             log.log(Level.SEVERE, "A problem occured while getting the default workbook...", ex);
             throw new NewFileCreationException("Cannot create new file!");
         }
