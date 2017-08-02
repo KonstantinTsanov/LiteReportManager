@@ -23,6 +23,7 @@
  */
 package net.thecir.reportmanagers;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -52,8 +54,11 @@ import net.thecir.exceptions.OutputFileNotCorrectException;
 import net.thecir.exceptions.InputFileNotMatchingSelectedFileException;
 import net.thecir.exceptions.OutputFileIOException;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.poi.POIXMLDocument;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.poifs.filesystem.DocumentFactoryHelper;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
@@ -94,8 +99,6 @@ public abstract class ReportManager {
     private Workbook outputWorkbook;
 
     private File outputWorkbookFile;
-    //xls or xlsx
-    private ExcelWorkbookType inputWorkbookType;
 
     //Input worksheet
     protected Sheet inputDataSheet;
@@ -131,24 +134,15 @@ public abstract class ReportManager {
         } catch (InvalidFormatException ex) {
             log.log(Level.SEVERE, null, ex);
         }
-        if (inputWorkbookType == ExcelWorkbookType.XLS) {
-            try (InputStream is = new FileInputStream(inputWorkbookFile)) {
+
+        try (InputStream is = new BufferedInputStream(new FileInputStream(inputWorkbookFile))) {
+            if (POIFSFileSystem.hasPOIFSHeader(is)) {
                 inputWorkbook = new HSSFWorkbook(is);
-            } catch (FileNotFoundException ex) {
-                //TODO
-                log.log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                log.log(Level.SEVERE, null, ex);
+            } else if (DocumentFactoryHelper.hasOOXMLHeader(is)) {
+                inputWorkbook = new XSSFWorkbook(is);
             }
-        } else {
-            try {
-                inputWorkbook = new XSSFWorkbook(inputWorkbookFile);
-            } catch (IOException ex) {
-                //TODO
-                log.log(Level.SEVERE, null, ex);
-            } catch (InvalidFormatException ex) {
-                log.log(Level.SEVERE, null, ex);
-            }
+        } catch (IOException ex) {
+            Logger.getLogger(ReportManager.class.getName()).log(Level.SEVERE, null, ex);
         }
         inputDataSheet = inputWorkbook.getSheetAt(0);
         weeklyReportSheet = outputWorkbook.getSheetAt(0);
@@ -737,7 +731,6 @@ public abstract class ReportManager {
 
     protected abstract boolean isInputFileCorrect();
 
-    protected abstract String getShopOnRow(int row);
+    protected abstract String getStoreName(int row);
 
-    protected abstract Cell getCellContainingDate() throws InputFileContainsNoValidDateException;
 }

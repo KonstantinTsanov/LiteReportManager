@@ -39,6 +39,7 @@ import net.thecir.enums.Platforms;
 import net.thecir.exceptions.InputFileContainsNoValidDateException;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.ss.util.CellUtil;
@@ -58,7 +59,7 @@ public class TechnopolisReportManager extends ReportManager {
     protected void formatDataHashMap() {
         String store;
         for (int row = TechnopolisConstants.FIRST_ROW; row <= inputDataSheet.getLastRowNum(); row++) {
-            store = getShopOnRow(row);
+            store = getStoreName(row);
             if (store != null) {
                 if (!newData.containsKey(store)) {
                     newData.put(store, new HashMap<>());
@@ -70,20 +71,57 @@ public class TechnopolisReportManager extends ReportManager {
 
     @Override
     protected int getWeekNumber() throws InputFileContainsNoValidDateException {
-        Cell dateCell = getCellContainingDate();
-        if (dateCell != null) {
-            //+
-            String dateStringWithoutSpaces = dateCell.getStringCellValue().replaceAll("\\s", "");
+        try {
+            Date date = getDate();
+            if (date == null) {
+                throw new InputFileContainsNoValidDateException("The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
+            }
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            return cal.get(Calendar.WEEK_OF_YEAR);
+        } catch (ParseException ex) {
+            log.log(Level.SEVERE, "Unparsable source file date!", ex);
+            throw new InputFileContainsNoValidDateException("The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
+        }
+    }
+
+    /**
+     * Helper method, because the file seems too chaotic and the date looks
+     * placed there by hand. Therefore it could be placed in any of the 3 cells
+     * at the top of the sheet.
+     *
+     * @return The exact cell, which contains the date.
+     * @throws InputFileContainsNoValidDateException thrown if no parsable date
+     * was found in any of the cells A1, B1 or C1.
+     * @throws java.text.ParseException
+     */
+    protected Date getDate() throws InputFileContainsNoValidDateException, ParseException {
+        for (int column = 0; column < 3; column++) {
+            CellReference possibleDateCellRef = new CellReference(0, column);
+            Cell possibleDateCell = inputDataSheet.getRow(possibleDateCellRef.getRow()).getCell(possibleDateCellRef.getCol());
+            if (possibleDateCell.getCellTypeEnum() != CellType.STRING
+                    || "".equals(possibleDateCell.getStringCellValue())) {
+                if (column == 2) {
+                    throw new InputFileContainsNoValidDateException(
+                            "Please add \"From-To\" dates in any of the following cells: A1, B1, C1. The date format should be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY.");
+                }
+                continue;
+            }
+            String dateStringWithoutSpaces = possibleDateCell.getStringCellValue().replaceAll("\\s", "");
             Pattern pattern = Pattern.compile("-\\d{2}\\.\\d{2}\\.\\d{2}(?:\\d{2})?");
             boolean matchedOnce = false;
             Matcher matcher = pattern.matcher(dateStringWithoutSpaces);
             String extractedDate = null;
             while (matcher.find()) {
                 if (matchedOnce == true) {
-                    throw new InputFileContainsNoValidDateException("The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
+                    throw new InputFileContainsNoValidDateException(
+                            "The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
                 }
                 matchedOnce = true;
                 extractedDate = matcher.group().substring(1);
+            }
+            if (extractedDate == null) {
+                continue;
             }
             SimpleDateFormat parser;
             if (extractedDate.length() == 10) {
@@ -91,31 +129,7 @@ public class TechnopolisReportManager extends ReportManager {
             } else {
                 parser = new SimpleDateFormat("dd.MM.yy");
             }
-            try {
-                Date date = parser.parse(extractedDate);
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                return cal.get(Calendar.WEEK_OF_YEAR);
-            } catch (ParseException ex) {
-                log.log(Level.SEVERE, "Unparsable date!", ex);
-                throw new InputFileContainsNoValidDateException("The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
-            }
-        }
-        return -1;
-    }
-
-    @Override
-    protected Cell getCellContainingDate() throws InputFileContainsNoValidDateException {
-        for (int column = 0; column < 3; column++) {
-            CellReference possibleDateCellRef = new CellReference(0, column);
-            Cell possibleDateCell = inputDataSheet.getRow(possibleDateCellRef.getRow()).getCell(possibleDateCellRef.getCol());
-            if ("".equals(possibleDateCell.getStringCellValue())) {
-                if (column == 2) {
-                    throw new InputFileContainsNoValidDateException("Please add \"From-To\" dates in any of the following cells: A1, B1, C1. The date format should be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY.");
-                }
-                continue;
-            }
-            return possibleDateCell;
+            return parser.parse(extractedDate);
         }
         return null;
     }
@@ -159,7 +173,7 @@ public class TechnopolisReportManager extends ReportManager {
                 break;
             }
             do {
-                String store = getShopOnRow(row);
+                String store = getStoreName(row);
                 if (!newData.get(store).get(currentPlatform).containsKey(currentTitle)) {
                     newData.get(store).get(currentPlatform).put(currentTitle, new StockSales());
                 }
@@ -197,6 +211,9 @@ public class TechnopolisReportManager extends ReportManager {
         for (int row = TechnopolisConstants.FIRST_ROW; row <= inputDataSheet.getLastRowNum(); row++) {
             CellReference shopCellRef = new CellReference("C" + (row + 1));
             Cell shopCell = CellUtil.getRow(shopCellRef.getRow(), inputDataSheet).getCell(shopCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            if (shopCell.getCellTypeEnum() != CellType.STRING) {
+                continue;
+            }
             Matcher m = pt.matcher(shopCell.getStringCellValue());
             if (m.find()) {
                 return true;
@@ -206,7 +223,7 @@ public class TechnopolisReportManager extends ReportManager {
     }
 
     @Override
-    protected String getShopOnRow(int row) {
+    protected String getStoreName(int row) {
         //Matches only if the string does not begin with any of the strings in the braces and has one or more symbols (.+). Therefore if its an empty string it wont match.
         Pattern pt = Pattern.compile("^(?!Обект|Резултат|\\s).+");
         CellReference shopCellRef = new CellReference(row, TechnopolisConstants.SHOP_COLUMN);
