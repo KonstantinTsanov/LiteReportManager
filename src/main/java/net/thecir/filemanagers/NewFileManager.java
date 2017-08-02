@@ -31,14 +31,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import net.thecir.callbacks.FileCallback;
 import net.thecir.exceptions.NewFileCreationException;
 import net.thecir.exceptions.OutputFileIOException;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
@@ -69,7 +67,6 @@ public class NewFileManager {
 
     public File createNewWorkbook() throws OutputFileIOException, NewFileCreationException {
         XSSFWorkbook wb;
-        System.out.println();
         try {
             wb = new XSSFWorkbook(ClassLoader.getSystemResourceAsStream("excel/default.xlsx"));
             NewFileFormatter formatter = new NewFileFormatter(wb);
