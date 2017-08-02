@@ -24,14 +24,12 @@
 package net.thecir.core;
 
 import java.io.File;
-import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import net.thecir.enums.Stores;
