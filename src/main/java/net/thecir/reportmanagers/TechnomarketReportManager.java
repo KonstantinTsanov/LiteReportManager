@@ -76,7 +76,7 @@ public class TechnomarketReportManager extends ReportManager {
         while (m.find()) {
             if (datesCount >= 2) {
                 throw new InputFileContainsNoValidDateException(
-                        "There are more than two dates in the date scope of the file. Please, leave only first and last week in cell A3 of the file.");
+                        rb.getString("TechnopolisInputNoValidDate"));
             }
             String extractedDate = m.group(0);
             SimpleDateFormat parser = new SimpleDateFormat("dd.MM.yyyy");
@@ -85,7 +85,7 @@ public class TechnomarketReportManager extends ReportManager {
                 datesCount++;
             } catch (ParseException ex) {
                 log.log(Level.SEVERE, "Unparsable source file date!", ex);
-                throw new InputFileContainsNoValidDateException("Could not read dates from the source file!");
+                throw new InputFileContainsNoValidDateException("TechnopolisInputNoValidDate");
             }
         }
         if (dates[0].compareTo(dates[1]) > 0) {
@@ -147,7 +147,7 @@ public class TechnomarketReportManager extends ReportManager {
                 CellReference dataCellReference = new CellReference(row, column);
                 Cell dataCell = inputDataSheet.getRow(dataCellReference.getRow()).getCell(dataCellReference.getCol());
                 //stock
-                if (column % 2 == 0) {
+                if (column % 2 == 1) {
                     StockSales currentStockSales = newData.get(store).get(gamePlatform).get(gameTitle);
                     currentStockSales.Stock += (int) dataCell.getNumericCellValue();
                     newData.get(store).get(gamePlatform).put(gameTitle, currentStockSales);
@@ -164,7 +164,7 @@ public class TechnomarketReportManager extends ReportManager {
     protected boolean isInputFileCorrect() {
         Pattern pt = Pattern.compile("technomarket", Pattern.CASE_INSENSITIVE);
         Cell infoCell = inputDataSheet.getRow(TechnomarketConstants.INFO_CELL_ROW).getCell(TechnomarketConstants.INFO_CELL_COL);
-        if (infoCell.getCellTypeEnum() != CellType.STRING) {
+        if (infoCell == null || infoCell.getCellTypeEnum() != CellType.STRING) {
             return false;
         }
         Matcher m = pt.matcher(infoCell.getStringCellValue());
