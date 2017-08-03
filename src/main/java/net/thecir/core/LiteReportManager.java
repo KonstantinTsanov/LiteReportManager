@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import lombok.extern.java.Log;
 import net.thecir.enums.Stores;
@@ -58,7 +59,9 @@ public class LiteReportManager {
     private static LiteReportManager SINGLETON;
 
     private JFrame parentFrame;
+    private JTextField statusBar;
     private ReportManager reportManager;
+    private ResourceBundle rb;
 
     public static LiteReportManager getInstance() {
         if (SINGLETON == null) {
@@ -67,20 +70,29 @@ public class LiteReportManager {
         return SINGLETON;
     }
 
-    public void initOutputComponents(JFrame parentFrame) {
+    public void initOutputComponents(JFrame parentFrame, JTextField statusBar) {
+        this.statusBar = statusBar;
         this.parentFrame = parentFrame;
+        rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
     }
 
     public void createNewFile() {
         newFileExec.execute(() -> {
             try {
-                File newFile = NewFileManager.getInstance().createNewWorkbook();
+                boolean created = NewFileManager.getInstance().createNewWorkbook();
+                if (created == true) {
+                    statusBarSetText(rb.getString("SuccessfullyCreatedNewFile"));
+                } else {
+                    statusBarSetText(rb.getString("FailedToCreateNewFile"));
+                }
             } catch (OutputFileIOException ex) {
                 log.log(Level.SEVERE, "An error occured while saving file.", ex);
                 printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
+                statusBarSetText(rb.getString("FailedToCreateNewFile"));
             } catch (NewFileCreationException ex) {
                 log.log(Level.SEVERE, "An error occured while creating file.", ex);
                 printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
+                statusBarSetText(rb.getString("FailedToCreateNewFile"));
             }
         });
     }
@@ -94,17 +106,24 @@ public class LiteReportManager {
             }
             try {
                 reportManager.generateReport();
+                statusBarSetText(rb.getString("SuccessfullyGeneratedReport"));
             } catch (OutputFileIsFullException | OutputFileNoRecordsFoundException | InputFileNotMatchingSelectedFileException | OutputFileNotCorrectException | OutputFileIOException | InputFileContainsNoValidDateException ex) {
-                log.log(Level.SEVERE, ex.getMessage(), ex);
+                log.log(Level.SEVERE, "Failiure during raport generation!", ex);
                 printMessageViaPane(ex.getMessage(), JOptionPane.ERROR_MESSAGE);
+                statusBarSetText(rb.getString("FailedToGenerateReport"));
             }
         });
     }
 
     private void printMessageViaPane(String message, int errorMessage) {
         SwingUtilities.invokeLater(() -> {
-            ResourceBundle rb = ResourceBundle.getBundle("LanguageBundles/Bundle");
             JOptionPane.showMessageDialog(parentFrame, message, rb.getString("MessageTitle"), errorMessage);
+        });
+    }
+
+    private void statusBarSetText(String text) {
+        SwingUtilities.invokeLater(() -> {
+            statusBar.setText(text);
         });
     }
 }
