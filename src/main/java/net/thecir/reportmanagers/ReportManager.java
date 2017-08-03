@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -122,7 +121,7 @@ public abstract class ReportManager {
         this.outputWorkbookFile = outputWorkbookFile;
         this.undo = undo;
         newData = new HashMap<>();
-        rb = ResourceBundle.getBundle("LanguageBundles/Bundle");
+        rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
         try {
             //TODO Input stream resource
             outputWorkbook = WorkbookFactory.create(new FileInputStream(outputWorkbookFile));
@@ -140,7 +139,7 @@ public abstract class ReportManager {
                 inputWorkbook = new XSSFWorkbook(is);
             }
         } catch (IOException ex) {
-            Logger.getLogger(ReportManager.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, null, ex);
         }
         inputDataSheet = inputWorkbook.getSheetAt(0);
         weeklyReportSheet = outputWorkbook.getSheetAt(0);
@@ -154,23 +153,27 @@ public abstract class ReportManager {
             OutputFileNoRecordsFoundException, InputFileNotMatchingSelectedFileException,
             OutputFileNotCorrectException, OutputFileIOException, InputFileContainsNoValidDateException {
         if (!isOutputFileCorrect()) {
-            throw new OutputFileNotCorrectException("The destionation file isn't correct. Select another file or create new.");
+            throw new OutputFileNotCorrectException(rb.getString("OutputFileNotValidExceptionMessage"));
         }
         if (!isInputFileCorrect()) {
-            throw new InputFileNotMatchingSelectedFileException("The source file isn't from the selected retailer.");
+            throw new InputFileNotMatchingSelectedFileException(rb.getString("InputFileNotValidExceptionMessage"));
         }
         formatDataHashMap();
         readInputData();
         writeToSheet();
+        if (!outputWorkbookFile.renameTo(outputWorkbookFile)) {
+            log.log(Level.SEVERE, "The selected output file is in use by another process/program.");
+            throw new OutputFileIOException("OutputFileInUseException");
+        }
         try (FileOutputStream fileOut = new FileOutputStream(outputWorkbookFile)) {
             XSSFFormulaEvaluator.evaluateAllFormulaCells(outputWorkbook);
             outputWorkbook.write(fileOut);
         } catch (FileNotFoundException ex) {
             log.log(Level.SEVERE, "The file to save the workbook in was not found.", ex);
-            throw new OutputFileIOException("The file to save the workbook in was not found.");
+            throw new OutputFileIOException(rb.getString("OutputFileNotFoundOrInUseMessage"));
         } catch (IOException ex) {
             log.log(Level.SEVERE, "There's an IO problem with the output file.", ex);
-            throw new OutputFileIOException("There's an IO problem with the output file.");
+            throw new OutputFileIOException(rb.getString("OutputFileIOExceptionMessage"));
         }
     }
 
@@ -203,6 +206,22 @@ public abstract class ReportManager {
                     .getCell(latestWeekStockCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK).setCellValue("Stock w" + weekNo);
             weeklyReportSheet.getRow(weekCellRef.getRow()).getCell(weekCellRef.getCol()).setCellValue("w" + weekNo);
             for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row <= Constants.PLATFORM_HEADER_LAST_ROW; row++) {
+                //-----------
+                CellReference daysInStockCellRef = new CellReference("BJ" + row);
+                Cell daysInStockCell = weeklyReportSheet.getRow(daysInStockCellRef.getRow()).getCell(daysInStockCellRef.getCol());
+                String formula = "IF(OR(BI" + row + "=\"" + Constants.NO_DATA + "\",BI" + row + "=\"\"),BI" + row + "&\"\",IFERROR(BI" + row
+                        + "/BD" + row + "*7*COUNT(C" + row + ":BB" + row + "),\"\"))";
+                if (daysInStockCell.getCellTypeEnum() != CellType.FORMULA || !daysInStockCell.getCellFormula().equals(formula)) {
+                    daysInStockCell.setCellFormula(formula);
+                }
+
+                CellReference totalDaysInStockCellRef = new CellReference("BJ" + Constants.PLATFORMS_TABLE_LASTROW);
+                Cell totalDaysInStockCell = weeklyReportSheet.getRow(totalDaysInStockCellRef.getRow()).getCell(totalDaysInStockCellRef.getCol());
+                formula = "IFERROR(BI16/BD16*7*COUNTIF(C3:BB3,\"<>\"&\"\"),0)";
+                if (totalDaysInStockCell.getCellTypeEnum() != CellType.FORMULA || !totalDaysInStockCell.getCellFormula().equals(formula)) {
+                    totalDaysInStockCell.setCellFormula(formula);
+                }
+                //--------
                 CellReference currentOutputAbbreviationRef = new CellReference("B" + row);
                 String currentOutputAbbreviation = weeklyReportSheet.getRow(currentOutputAbbreviationRef.getRow())
                         .getCell(currentOutputAbbreviationRef.getCol()).getStringCellValue();
