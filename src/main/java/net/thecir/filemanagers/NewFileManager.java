@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ResourceBundle;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -50,6 +51,7 @@ public class NewFileManager {
     private volatile FileCallback fileCallback;
 
     private static NewFileManager instance;
+    ResourceBundle rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
 
     private NewFileManager() {
     }
@@ -65,7 +67,7 @@ public class NewFileManager {
         this.fileCallback = fileCallback;
     }
 
-    public File createNewWorkbook() throws OutputFileIOException, NewFileCreationException {
+    public boolean createNewWorkbook() throws OutputFileIOException, NewFileCreationException {
         XSSFWorkbook wb;
         try {
             wb = new XSSFWorkbook(ClassLoader.getSystemResourceAsStream("excel/default.xlsx"));
@@ -81,10 +83,10 @@ public class NewFileManager {
                 SwingUtilities.invokeAndWait(getFileTask);
             } catch (InterruptedException ex) {
                 log.log(Level.SEVERE, "A thread waiting for the user to select new file to be created has been interrupted.", ex);
-                throw new RuntimeException("Failed to create new file.");
+                throw new RuntimeException(rb.getString("FailedToCreateNewFile"));
             } catch (InvocationTargetException ex) {
                 log.log(Level.SEVERE, "Invocation of the runnable to obtain the new file name/path has failed.", ex);
-                throw new RuntimeException("Failed to create new file.");
+                throw new RuntimeException(rb.getString("FailedToCreateNewFile"));
             }
 
             File file = null;
@@ -92,13 +94,13 @@ public class NewFileManager {
                 file = getFileTask.get();
             } catch (InterruptedException ex) {
                 log.log(Level.SEVERE, "The thread waiting for the user to select new file to be created has been interrupted.", ex);
-                throw new RuntimeException("Failed to create new file.");
+                throw new RuntimeException(rb.getString("FailedToCreateNewFile"));
             } catch (ExecutionException ex) {
                 log.log(Level.SEVERE, "Failed to obtain the new file name.", ex);
-                throw new RuntimeException("Failed to create new file.");
+                throw new RuntimeException(rb.getString("FailedToCreateNewFile"));
             }
             if (file == null) {
-                return null;
+                return false;
             }
             if (!file.renameTo(file)) {
                 log.log(Level.SEVERE, "The selected output file is in use by another process/program.");
@@ -113,7 +115,7 @@ public class NewFileManager {
             }
             try (FileOutputStream fileOut = new FileOutputStream(file)) {
                 wb.write(fileOut);
-                return file;
+                return true;
             } catch (IOException ex) {
                 throw new OutputFileIOException("A problem occured while saving file!");
             }
