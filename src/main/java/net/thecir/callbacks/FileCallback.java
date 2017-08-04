@@ -35,4 +35,10 @@ public interface FileCallback {
      * @return Selected file.
      */
     public File getFile();
+
+    /**
+     * Puts the file on display on the GUI and sets it as output file for the
+     * application.
+     */
+    public void setAsOutputAndDisplay();
 }
