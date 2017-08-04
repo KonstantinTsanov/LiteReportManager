@@ -76,7 +76,7 @@ public class TechnomarketReportManager extends ReportManager {
         while (m.find()) {
             if (datesCount >= 2) {
                 throw new InputFileContainsNoValidDateException(
-                        rb.getString("TechnopolisInputNoValidDate"));
+                        rb.getString("TechnomarketInputNoValidDate"));
             }
             String extractedDate = m.group(0);
             SimpleDateFormat parser = new SimpleDateFormat("dd.MM.yyyy");
@@ -85,7 +85,7 @@ public class TechnomarketReportManager extends ReportManager {
                 datesCount++;
             } catch (ParseException ex) {
                 log.log(Level.SEVERE, "Unparsable source file date!", ex);
-                throw new InputFileContainsNoValidDateException("TechnopolisInputNoValidDate");
+                throw new InputFileContainsNoValidDateException("TechnomarketInputNoValidDate");
             }
         }
         if (dates[0].compareTo(dates[1]) > 0) {

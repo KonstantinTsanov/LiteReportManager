@@ -51,7 +51,6 @@ import net.thecir.exceptions.OutputFileNoRecordsFoundException;
 import net.thecir.exceptions.OutputFileNotCorrectException;
 import net.thecir.exceptions.InputFileNotMatchingSelectedFileException;
 import net.thecir.exceptions.OutputFileIOException;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.poifs.filesystem.DocumentFactoryHelper;
@@ -161,16 +160,18 @@ public abstract class ReportManager {
         formatDataHashMap();
         readInputData();
         writeToSheet();
-        if (!outputWorkbookFile.renameTo(outputWorkbookFile)) {
+        if (outputWorkbookFile.exists() && !outputWorkbookFile.renameTo(outputWorkbookFile)) {
             log.log(Level.SEVERE, "The selected output file is in use by another process/program.");
-            throw new OutputFileIOException("OutputFileInUseException");
+            throw new OutputFileIOException(rb.getString("OutputFileInUseException"));
         }
         try (FileOutputStream fileOut = new FileOutputStream(outputWorkbookFile)) {
             XSSFFormulaEvaluator.evaluateAllFormulaCells(outputWorkbook);
+            newData = null;
             outputWorkbook.write(fileOut);
+
         } catch (FileNotFoundException ex) {
             log.log(Level.SEVERE, "The file to save the workbook in was not found.", ex);
-            throw new OutputFileIOException(rb.getString("OutputFileNotFoundOrInUseMessage"));
+            throw new OutputFileIOException(rb.getString("OutputFileNotFoundMessage"));
         } catch (IOException ex) {
             log.log(Level.SEVERE, "There's an IO problem with the output file.", ex);
             throw new OutputFileIOException(rb.getString("OutputFileIOExceptionMessage"));
@@ -254,12 +255,13 @@ public abstract class ReportManager {
         }
         //Checking if the lastly added week is the week to be removed.
         CellReference stockWeekNumberCellRef = new CellReference("BI" + Constants.PLATFORMS_TABLE_WEEK_ROW);
-        Pattern pattern = Pattern.compile("w" + weekNo);
+        Pattern pattern = Pattern.compile("w" + weekNo, Pattern.CASE_INSENSITIVE);
         Matcher m = pattern.matcher(weeklyReportSheet.getRow(stockWeekNumberCellRef.getRow()).getCell(stockWeekNumberCellRef.getCol()).getStringCellValue());
-        if (m.matches()) {
+        if (m.find()) {
             for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; row++) {
                 CellReference latestWeekStockCellRef = new CellReference("BI" + row);
                 CellReference currentRowPlatformCellRef = new CellReference("B" + row);
+                System.out.println(weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()));
                 if (weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()).getCellTypeEnum() == CellType.BLANK) {
                     if (stockAndSalesByPlatform.get(weeklyReportSheet.getRow(currentRowPlatformCellRef
                             .getRow()).getCell(currentRowPlatformCellRef.getCol()).getStringCellValue()).Stock == 0) {
@@ -267,13 +269,10 @@ public abstract class ReportManager {
                     }
                 } else {
                     Cell latestWeekStockCell = weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol());
-                    int stockParser;
-                    if (NumberUtils.isParsable(latestWeekStockCell.getStringCellValue())) {
-                        stockParser = Integer.parseInt(latestWeekStockCell.getStringCellValue());
-                    } else {
+                    if (latestWeekStockCell.getCellTypeEnum() != CellType.NUMERIC) {
                         break;
                     }
-                    if (stockParser == stockAndSalesByPlatform.get(weeklyReportSheet.getRow(currentRowPlatformCellRef
+                    if (latestWeekStockCell.getNumericCellValue() == stockAndSalesByPlatform.get(weeklyReportSheet.getRow(currentRowPlatformCellRef
                             .getRow()).getCell(currentRowPlatformCellRef.getCol()).getStringCellValue()).Stock) {
                         continue;
                     }
@@ -334,7 +333,7 @@ public abstract class ReportManager {
                 CellReference currentPlatformCellRef = new CellReference("B" + row);
                 CellReference currentValueCellRef = new CellReference(row - 1, columnsMatchingWeeklyHeader.get(column) - 1);
                 String currentRowPlatform = weeklyReportSheet.getRow(currentPlatformCellRef.getRow()).getCell(currentPlatformCellRef.getCol()).getStringCellValue();
-                if (weeklyReportSheet.getRow(currentValueCellRef.getRow()).getCell(currentValueCellRef.getCol()).getCellTypeEnum() == CellType.BLANK) {
+                if (weeklyReportSheet.getRow(currentValueCellRef.getRow()).getCell(currentValueCellRef.getCol()).getCellTypeEnum() != CellType.NUMERIC) {
                     if (newData.get(currentRowPlatform).Sales == Integer.MIN_VALUE) {
                         continue;
                     }
@@ -598,7 +597,8 @@ public abstract class ReportManager {
 
     private HashMap<String, HashMap<String, Integer>> getCurrentOverallSalesPerPlatform() {
         HashMap<String, HashMap<String, Integer>> shopPlatformSales = new HashMap<>();
-        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= salesByPlatformSheet.getLastRowNum(); row++) {
+        int lastRowUsed = salesByPlatformSheet.getLastRowNum() + 1; //1 based
+        for (int row = Constants.OVERALL_SALES_BY_PLATFORM_FIRST_ROW; row <= lastRowUsed; row++) {
             CellReference shopCellRef = new CellReference(row - 1, 0);
             Cell shopCell = salesByPlatformSheet.getRow(shopCellRef.getRow()).getCell(shopCellRef.getCol());
             if ("".equals(shopCell.getStringCellValue())) {

@@ -24,13 +24,20 @@
 package net.thecir.reportmanagers;
 
 import com.thecir.tools.ExcelTools;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map.Entry;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.java.Log;
@@ -50,11 +57,11 @@ import org.apache.poi.ss.util.CellUtil;
  */
 @Log
 public class TechnopolisReportManager extends ReportManager {
-    
+
     public TechnopolisReportManager(File inputFilePath, File outputFilePath, boolean undo) {
         super(inputFilePath, outputFilePath, undo);
     }
-    
+
     @Override
     protected void formatDataHashMap() {
         String store;
@@ -68,20 +75,20 @@ public class TechnopolisReportManager extends ReportManager {
         }
         super.formatDataHashMap();
     }
-    
+
     @Override
     protected int getWeekNumber() throws InputFileContainsNoValidDateException {
         try {
             Date date = getDate();
             if (date == null) {
-                throw new InputFileContainsNoValidDateException(rb.getString("TechnomarketInputNoValidDate"));
+                throw new InputFileContainsNoValidDateException(rb.getString("TechnopolisInputNoValidDate"));
             }
             Calendar cal = Calendar.getInstance();
             cal.setTime(date);
             return cal.get(Calendar.WEEK_OF_YEAR);
         } catch (ParseException ex) {
             log.log(Level.SEVERE, "Unparsable source file date!", ex);
-            throw new InputFileContainsNoValidDateException(rb.getString("TechnomarketInputNoValidDate"));
+            throw new InputFileContainsNoValidDateException(rb.getString("TechnopolisInputNoValidDate"));
         }
     }
 
@@ -102,8 +109,7 @@ public class TechnopolisReportManager extends ReportManager {
             if (possibleDateCell.getCellTypeEnum() != CellType.STRING
                     || "".equals(possibleDateCell.getStringCellValue())) {
                 if (column == 2) {
-                    throw new InputFileContainsNoValidDateException(
-                            "Please add \"From-To\" dates in any of the following cells: A1, B1, C1. The date format should be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY.");
+                    throw new InputFileContainsNoValidDateException(rb.getString("TechnopolisInputNoValidDate"));
                 }
                 continue;
             }
@@ -114,8 +120,7 @@ public class TechnopolisReportManager extends ReportManager {
             String extractedDate = null;
             while (matcher.find()) {
                 if (matchedOnce == true) {
-                    throw new InputFileContainsNoValidDateException(
-                            "The date format must be DD.MM-DD.MM.YY or DD.MM-DD.MM.YYYY. The date must be located in any of the following cells: A1, B1, C1.");
+                    throw new InputFileContainsNoValidDateException(rb.getString("TechnopolisInputNoValidDate"));
                 }
                 matchedOnce = true;
                 extractedDate = matcher.group().substring(1);
@@ -133,7 +138,7 @@ public class TechnopolisReportManager extends ReportManager {
         }
         return null;
     }
-    
+
     @Override
     protected void readInputData() {
         final int lastRowUsed = inputDataSheet.getLastRowNum();
@@ -143,13 +148,13 @@ public class TechnopolisReportManager extends ReportManager {
             CellReference soldQuantityCellRef = new CellReference(row, TechnopolisConstants.SOLD_QUANTITY_COLUMN);
             CellReference stockCellRef = new CellReference(row, TechnopolisConstants.STOCK_COLUMN);
             CellReference nextRowItemNumberCellRef;
-            
+
             Cell itemNumberCell = CellUtil.getRow(itemNumberCellRef.getRow(), inputDataSheet).getCell(itemNumberCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             Cell gameDescriptionCell = CellUtil.getRow(gameDescriptionCellRef.getRow(), inputDataSheet).getCell(gameDescriptionCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             Cell soldQuantityCell = CellUtil.getRow(soldQuantityCellRef.getRow(), inputDataSheet).getCell(soldQuantityCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             Cell stockCell = CellUtil.getRow(stockCellRef.getRow(), inputDataSheet).getCell(stockCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             Cell nextRowItemNumberCell;
-            
+
             if ("".equals(ExcelTools.getStringCellValue(itemNumberCell)) || !NumberUtils.isParsable(ExcelTools.getStringCellValue(itemNumberCell))) {
                 continue;
             }
@@ -190,21 +195,21 @@ public class TechnopolisReportManager extends ReportManager {
                     newData.get(store).get(currentPlatform).put(currentTitle, updatedStockSales);
                 }
                 row++;
-                
+
                 itemNumberCellRef = new CellReference(row, TechnopolisConstants.ITEM_COLUMN);
                 nextRowItemNumberCellRef = new CellReference(row + 1, TechnopolisConstants.ITEM_COLUMN);
                 soldQuantityCellRef = new CellReference(row, TechnopolisConstants.SOLD_QUANTITY_COLUMN);
                 stockCellRef = new CellReference(row, TechnopolisConstants.STOCK_COLUMN);
-                
+
                 itemNumberCell = CellUtil.getRow(itemNumberCellRef.getRow(), inputDataSheet).getCell(itemNumberCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                 nextRowItemNumberCell = CellUtil.getRow(nextRowItemNumberCellRef.getRow(), inputDataSheet).getCell(nextRowItemNumberCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                 soldQuantityCell = CellUtil.getRow(soldQuantityCellRef.getRow(), inputDataSheet).getCell(soldQuantityCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                 stockCell = CellUtil.getRow(stockCellRef.getRow(), inputDataSheet).getCell(stockCellRef.getCol(), Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                
+
             } while (row != lastRowUsed && "".equals(ExcelTools.getStringCellValue(itemNumberCell)) && "".equals(ExcelTools.getStringCellValue(nextRowItemNumberCell)));
         }
     }
-    
+
     @Override
     protected boolean isInputFileCorrect() {
         Pattern pt = Pattern.compile("^(Технополис|Видеолукс|WEB|GSM)");
@@ -221,7 +226,7 @@ public class TechnopolisReportManager extends ReportManager {
         }
         return false;
     }
-    
+
     @Override
     protected String getStoreName(int row) {
         //Matches only if the string does not begin with any of the strings in the braces and has one or more symbols (.+). Therefore if its an empty string it wont match.
