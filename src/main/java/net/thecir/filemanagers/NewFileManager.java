@@ -37,7 +37,6 @@ import lombok.extern.java.Log;
 import net.thecir.callbacks.FileCallback;
 import net.thecir.exceptions.NewFileCreationException;
 import net.thecir.exceptions.OutputFileIOException;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
@@ -102,21 +101,16 @@ public class NewFileManager {
             if (file == null) {
                 return false;
             }
-            if (!file.renameTo(file)) {
+            if (file.exists() && !file.renameTo(file)) {
                 log.log(Level.SEVERE, "The selected output file is in use by another process/program.");
-                throw new OutputFileIOException("A file with the same name already exists and is in use by another program. Please close the file before attempting to save.");
-            }
-            if (!FilenameUtils.getExtension(file.getName()).equalsIgnoreCase("xlsx")) {
-                if ("".equals(FilenameUtils.getExtension(file.getAbsolutePath()))) {
-                    file = new File(file.toString() + ".xlsx");
-                } else {
-                    file = new File(file.getParentFile(), FilenameUtils.getBaseName(file.getName()) + ".xlsx");
-                }
+                throw new OutputFileIOException(rb.getString("OutputFileInUseException"));
             }
             try (FileOutputStream fileOut = new FileOutputStream(file)) {
                 wb.write(fileOut);
+                fileCallback.setAsOutputAndDisplay();
                 return true;
             } catch (IOException ex) {
+                log.log(Level.SEVERE, "Failed to save output file!", ex);
                 throw new OutputFileIOException("A problem occured while saving file!");
             }
 
