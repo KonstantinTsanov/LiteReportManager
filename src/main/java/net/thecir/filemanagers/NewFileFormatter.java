@@ -240,7 +240,7 @@ public class NewFileFormatter {
             CellReference percentageCellsRef = new CellReference("BE" + i);
             Cell percentageCell = sheet.getRow(percentageCellsRef.getRow()).getCell(percentageCellsRef.getCol());
             percentageCell.setCellType(CellType.FORMULA);
-            percentageCell.setCellFormula("BD" + i + "/BD" + Constants.PLATFORMS_TABLE_LASTROW);
+            percentageCell.setCellFormula("IF(BD" + i + "<>0,BD" + i + "/BD" + Constants.PLATFORMS_TABLE_LASTROW + ",\"\")");
         }
         //Total percentage formula (adds up to 100%)
         CellReference totalPercentageCellRef = new CellReference("BE" + Constants.PLATFORMS_TABLE_LASTROW);
@@ -264,7 +264,8 @@ public class NewFileFormatter {
             Cell platformDaysInStockCell = sheet.getRow(platformDaysInStockCellRef.getRow()).getCell(platformDaysInStockCellRef.getCol());
             platformLabelCell.setCellValue(platform.getOutputAbbreviation());
             platformDaysInStockCell.setCellType(CellType.FORMULA);
-            platformDaysInStockCell.setCellFormula("IF(OR(BI" + rowIter + "=\"" + Constants.NO_DATA + "\",BI" + rowIter + "=\"\"),BI" + rowIter + "&\"\",IFERROR(BI" + rowIter
+            //Constants.NO_DATA
+            platformDaysInStockCell.setCellFormula("IF(BI" + rowIter + "=\"\",BI" + rowIter + "&\"\",IFERROR(BI" + rowIter
                     + "/BD" + rowIter + "*7*COUNT(C" + rowIter + ":BB" + rowIter + "),\"\"))");
             rowIter++;
         }
@@ -340,7 +341,8 @@ public class NewFileFormatter {
             CellReference stockCellRef = new CellReference("BO" + i);
             Cell stockCell = sheet.getRow(stockCellRef.getRow()).getCell(stockCellRef.getCol());
             stockCell.setCellType(CellType.FORMULA);
-            stockCell.setCellFormula("BI" + i + "/BI" + Constants.PLATFORMS_TABLE_LASTROW);
+            stockCell.setCellFormula("IF(BI" + i + "=\"\",BI" + i + "&\"\",IFERROR(BI" + i + "/BI" + Constants.PLATFORMS_TABLE_LASTROW + ",\"\"))");
+            //stockCell.setCellFormula("BI" + i + "/BI" + Constants.PLATFORMS_TABLE_LASTROW);
         }
         //Total stock percentage formula. Adds up to 100%
         CellReference totalStockCellRef = new CellReference("BO" + Constants.PLATFORMS_TABLE_LASTROW);
