@@ -77,6 +77,7 @@ public class Constants {
     public static final String NAMCO = "Namco";
     public static final String SELL_OUT = "Sell out";
 
-    public static String NO_DATA = "No data";
+    //Must find a way to use an empty constant during new file creation, not hardcoding empty string.
+    public static String NO_DATA = "";
 
 }
