@@ -210,7 +210,8 @@ public abstract class ReportManager {
                 //-----------
                 CellReference daysInStockCellRef = new CellReference("BJ" + row);
                 Cell daysInStockCell = weeklyReportSheet.getRow(daysInStockCellRef.getRow()).getCell(daysInStockCellRef.getCol());
-                String formula = "IF(OR(BI" + row + "=\"" + Constants.NO_DATA + "\",BI" + row + "=\"\"),BI" + row + "&\"\",IFERROR(BI" + row
+                //Constants.NO_DATA
+                String formula = "IF(BI" + row + "=\"\",BI" + row + "&\"\",IFERROR(BI" + row
                         + "/BD" + row + "*7*COUNT(C" + row + ":BB" + row + "),\"\"))";
                 if (daysInStockCell.getCellTypeEnum() != CellType.FORMULA || !daysInStockCell.getCellFormula().equals(formula)) {
                     daysInStockCell.setCellFormula(formula);
