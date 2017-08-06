@@ -5,7 +5,7 @@
     <artifactId>LiteReportManager</artifactId>
     <version>00.00.01</version>
     <packaging>jar</packaging>
-    <!--    <profiles>
+    <profiles>
         <profile>
             <id>disable-java8-doclint</id>
             <activation>
@@ -28,16 +28,16 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>  this is used for inheritance merges 
-                        <phase>package</phase>  append to the packaging phase. 
+                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                        <phase>package</phase> <!-- append to the packaging phase. -->
                         <goals>
-                            <goal>attached</goal>  goals == mojos 
+                            <goal>attached</goal> <!-- goals == mojos -->
                         </goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
-    </build>-->
+    </build>
     <dependencies>
         <dependency>
             <groupId>org.apache.poi</groupId>

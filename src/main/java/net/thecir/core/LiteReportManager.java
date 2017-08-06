@@ -61,19 +61,19 @@ public class LiteReportManager {
     private JFrame parentFrame;
     private JTextField statusBar;
     private ReportManager reportManager;
-    private ResourceBundle rb;
+    private static ResourceBundle rb;
 
     public static LiteReportManager getInstance() {
         if (SINGLETON == null) {
             SINGLETON = new LiteReportManager();
         }
+        rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
         return SINGLETON;
     }
 
     public void initOutputComponents(JFrame parentFrame, JTextField statusBar) {
         this.statusBar = statusBar;
         this.parentFrame = parentFrame;
-        rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
     }
 
     public void createNewFile() {

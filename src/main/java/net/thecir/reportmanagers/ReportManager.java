@@ -262,7 +262,6 @@ public abstract class ReportManager {
             for (int row = Constants.PLATFORM_HEADER_FIRST_ROW; row < Platforms.values().length + Constants.PLATFORM_HEADER_FIRST_ROW; row++) {
                 CellReference latestWeekStockCellRef = new CellReference("BI" + row);
                 CellReference currentRowPlatformCellRef = new CellReference("B" + row);
-                System.out.println(weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()));
                 if (weeklyReportSheet.getRow(latestWeekStockCellRef.getRow()).getCell(latestWeekStockCellRef.getCol()).getCellTypeEnum() == CellType.BLANK) {
                     if (stockAndSalesByPlatform.get(weeklyReportSheet.getRow(currentRowPlatformCellRef
                             .getRow()).getCell(currentRowPlatformCellRef.getCol()).getStringCellValue()).Stock == 0) {

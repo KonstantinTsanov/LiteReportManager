@@ -50,7 +50,7 @@ public class NewFileManager {
     private volatile FileCallback fileCallback;
 
     private static NewFileManager instance;
-    ResourceBundle rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
+    private static ResourceBundle rb;
 
     private NewFileManager() {
     }
@@ -59,6 +59,7 @@ public class NewFileManager {
         if (instance == null) {
             instance = new NewFileManager();
         }
+        rb = ResourceBundle.getBundle("CoreLanguageBundles/ErrorMessages");
         return instance;
     }
 
