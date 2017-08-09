@@ -212,6 +212,10 @@ public class TechnopolisReportManager extends ReportManager {
 
     @Override
     protected boolean isInputFileCorrect() {
+        //If there are more than 5 lines on a row
+        if (inputDataSheet.getRow(0).getLastCellNum() != 5) {
+            return false;
+        }
         Pattern pt = Pattern.compile("^(Технополис|Видеолукс|WEB|GSM)");
         for (int row = TechnopolisConstants.FIRST_ROW; row <= inputDataSheet.getLastRowNum(); row++) {
             CellReference shopCellRef = new CellReference("C" + (row + 1));
